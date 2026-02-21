@@ -1,0 +1,3 @@
+[    9594ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ https://mcp.figma.com/mcp/capture/1bdf843a-68eb-498e-a38b-cda0de795d2a/submit:0
+[    9594ms] [ERROR] [Figma Capture] Server error (409): Capture already submitted. Please start a new capture. @ :0
+[    9594ms] [ERROR] [Figma Capture] Error: Capture already submitted. Please start a new capture. @ :0

@@ -13,10 +13,15 @@ final class PromptImproverViewModel: ObservableObject {
     @Published var statusMessage: String = "Idle"
     @Published var errorMessage: String?
     @Published private(set) var availabilityByTool: [Tool: CLIAvailability] = [:]
+    @Published private(set) var capabilitiesByTool: [Tool: ToolCapabilities] = [:]
+
+    private(set) var engineSettings: EngineSettings
 
     private let discovery: CLIDiscovery
     private let healthCheck: CLIHealthCheck
     private let workspaceManager: WorkspaceManager
+    private let engineSettingsStore: EngineSettingsStore
+    private let capabilityCacheStore: ToolCapabilityCacheStore
 
     private var runningTask: Task<Void, Never>?
     private var currentProvider: CLIProvider?
@@ -24,11 +29,16 @@ final class PromptImproverViewModel: ObservableObject {
     init(
         discovery: CLIDiscovery = CLIDiscovery(),
         healthCheck: CLIHealthCheck = CLIHealthCheck(),
-        workspaceManager: WorkspaceManager = WorkspaceManager()
+        workspaceManager: WorkspaceManager = WorkspaceManager(),
+        engineSettingsStore: EngineSettingsStore = EngineSettingsStore(),
+        capabilityCacheStore: ToolCapabilityCacheStore = ToolCapabilityCacheStore()
     ) {
         self.discovery = discovery
         self.healthCheck = healthCheck
         self.workspaceManager = workspaceManager
+        self.engineSettingsStore = engineSettingsStore
+        self.capabilityCacheStore = capabilityCacheStore
+        self.engineSettings = engineSettingsStore.load()
         refreshAvailability()
     }
 
@@ -38,6 +48,10 @@ final class PromptImproverViewModel: ObservableObject {
 
     var selectedToolAvailability: CLIAvailability? {
         availabilityByTool[selectedTool]
+    }
+
+    var selectedToolCapabilities: ToolCapabilities? {
+        capabilitiesByTool[selectedTool]
     }
 
     var improveDisabledReason: String? {
@@ -62,12 +76,26 @@ final class PromptImproverViewModel: ObservableObject {
 
     func refreshAvailability() {
         var next: [Tool: CLIAvailability] = [:]
+        var nextCapabilities: [Tool: ToolCapabilities] = [:]
+
         for tool in Tool.allCases {
             let url = discovery.resolve(tool: tool)
             let availability = healthCheck.check(tool: tool, executableURL: url)
             next[tool] = availability
+
+            if availability.installed,
+               let executableURL = availability.executableURL,
+               let capabilities = capabilityCacheStore.capabilities(
+                    for: tool,
+                    executableURL: executableURL,
+                    versionString: availability.version
+               ) {
+                nextCapabilities[tool] = capabilities
+            }
         }
+
         availabilityByTool = next
+        capabilitiesByTool = nextCapabilities
     }
 
     func improve() {
@@ -142,6 +170,30 @@ final class PromptImproverViewModel: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         _ = pasteboard.setString(trimmed, forType: .string)
+    }
+
+    func resolvedEngineModels(for tool: Tool) -> [String] {
+        engineSettings.resolvedEngineModels(for: tool)
+    }
+
+    func resolvedDefaultEngineModel(for tool: Tool) -> String? {
+        engineSettings.resolvedDefaultEngineModel(for: tool)
+    }
+
+    func effectiveAllowedEfforts(for tool: Tool, model: String) -> [EngineEffort] {
+        engineSettings.effectiveAllowedEfforts(
+            for: tool,
+            model: model,
+            capabilities: capabilitiesByTool[tool]
+        )
+    }
+
+    func resolvedDefaultEffort(for tool: Tool, model: String) -> EngineEffort? {
+        engineSettings.resolvedDefaultEffort(
+            for: tool,
+            model: model,
+            capabilities: capabilitiesByTool[tool]
+        )
     }
 
     func verifyTemplates() -> [String] {
