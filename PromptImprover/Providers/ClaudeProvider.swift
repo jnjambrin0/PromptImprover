@@ -59,10 +59,7 @@ final class ClaudeProvider: CLIProvider {
             args.append(contentsOf: ["--model", model])
         }
 
-        let env = [
-            "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
-            "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"
-        ]
+        let env = makeEnvironment()
 
         let stream = processRunner.run(
             executableURL: executableURL,
@@ -119,10 +116,7 @@ final class ClaudeProvider: CLIProvider {
             args.append(contentsOf: ["--model", model])
         }
 
-        let env = [
-            "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
-            "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"
-        ]
+        let env = makeEnvironment()
 
         let stream = processRunner.run(
             executableURL: executableURL,
@@ -293,5 +287,16 @@ final class ClaudeProvider: CLIProvider {
         }
 
         return .toolExecutionFailed(message.isEmpty ? "Claude execution failed." : message)
+    }
+
+    private func makeEnvironment() -> [String: String] {
+        [
+            "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+            "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
+            "PATH": CLIExecutionEnvironment.patchedPATH(
+                executableURL: executableURL,
+                basePATH: ProcessInfo.processInfo.environment["PATH"]
+            )
+        ]
     }
 }

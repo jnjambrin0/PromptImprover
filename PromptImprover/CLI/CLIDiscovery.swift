@@ -1,38 +1,43 @@
 import Foundation
 
 struct CLIDiscovery {
+    private let fileManager: FileManager
+    private let homeDirectoryPath: String
+    private let localCommandRunner: LocalCommandRunning
+    private let baseCandidatesByTool: [Tool: [String]]?
+
+    init(
+        fileManager: FileManager = .default,
+        homeDirectoryPath: String = NSHomeDirectory(),
+        localCommandRunner: LocalCommandRunning = LocalCommandRunner(),
+        baseCandidatesByTool: [Tool: [String]]? = nil
+    ) {
+        self.fileManager = fileManager
+        self.homeDirectoryPath = homeDirectoryPath
+        self.localCommandRunner = localCommandRunner
+        self.baseCandidatesByTool = baseCandidatesByTool
+    }
+
     func resolve(tool: Tool) -> URL? {
         if let shellPath = resolveViaShell(tool: tool) {
             return shellPath
         }
-        return commonPaths(for: tool).first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
+        return commonPaths(for: tool).first(where: { fileManager.isExecutableFile(atPath: $0.path) })
     }
 
     private func resolveViaShell(tool: Tool) -> URL? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", "command -v \(tool.rawValue)"]
+        let result = localCommandRunner.run(
+            executableURL: URL(fileURLWithPath: "/bin/zsh"),
+            arguments: ["-lc", "command -v \(tool.rawValue)"],
+            environment: ProcessInfo.processInfo.environment,
+            timeout: 3
+        )
 
-        let outputPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = Pipe()
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
+        if result.timedOut || result.status != 0 {
             return nil
         }
 
-        guard process.terminationStatus == 0 else {
-            return nil
-        }
-
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        guard var path = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        path = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        let path = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !path.isEmpty else {
             return nil
         }
@@ -40,31 +45,33 @@ struct CLIDiscovery {
     }
 
     private func commonPaths(for tool: Tool) -> [URL] {
-        var candidates: [String]
-        switch tool {
-        case .codex:
-            candidates = [
-                "/opt/homebrew/bin/codex",
-                "/usr/local/bin/codex",
-                NSHomeDirectory() + "/.nvm/versions/node/current/bin/codex"
-            ]
-            candidates.append(contentsOf: nvmVersionedCandidates(tool: tool))
-        case .claude:
-            candidates = [
-                "/opt/homebrew/bin/claude",
-                "/usr/local/bin/claude",
-                NSHomeDirectory() + "/.local/bin/claude"
-            ]
-        }
+        var candidates = baseCandidatesByTool?[tool] ?? defaultCandidates(for: tool)
+        candidates.append(contentsOf: nvmVersionedCandidates(tool: tool))
 
         var seen: Set<String> = []
         let uniqueCandidates = candidates.filter { seen.insert($0).inserted }
         return uniqueCandidates.map { URL(fileURLWithPath: $0) }
     }
 
+    private func defaultCandidates(for tool: Tool) -> [String] {
+        switch tool {
+        case .codex:
+            return [
+                "/opt/homebrew/bin/codex",
+                "/usr/local/bin/codex",
+                homeDirectoryPath + "/.nvm/versions/node/current/bin/codex"
+            ]
+        case .claude:
+            return [
+                "/opt/homebrew/bin/claude",
+                "/usr/local/bin/claude",
+                homeDirectoryPath + "/.local/bin/claude"
+            ]
+        }
+    }
+
     private func nvmVersionedCandidates(tool: Tool) -> [String] {
-        let fileManager = FileManager.default
-        let nodeVersionsRoot = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let nodeVersionsRoot = URL(fileURLWithPath: homeDirectoryPath, isDirectory: true)
             .appendingPathComponent(".nvm/versions/node", isDirectory: true)
 
         guard let entries = try? fileManager.contentsOfDirectory(

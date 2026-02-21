@@ -146,9 +146,10 @@ final class CodexProvider: CLIProvider {
     }
 
     private func makeEnvironment(workspace: WorkspaceHandle, mode: RunMode) -> [String: String] {
-        let executableDirectory = executableURL.deletingLastPathComponent().path
-        let inheritedPath = ProcessInfo.processInfo.environment["PATH"] ?? ""
-        let patchedPath = inheritedPath.isEmpty ? executableDirectory : "\(executableDirectory):\(inheritedPath)"
+        let patchedPath = CLIExecutionEnvironment.patchedPATH(
+            executableURL: executableURL,
+            basePATH: ProcessInfo.processInfo.environment["PATH"]
+        )
 
         switch mode {
         case .isolatedHome:

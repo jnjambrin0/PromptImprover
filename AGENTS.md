@@ -10,7 +10,7 @@ This file is the single shared reference for code agents working in this reposit
 - Supported tools: `codex`, `claude`.
 - UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
-- Current phase: Task 2 settings UX shipped (native Settings with Models/Guides scaffold) and stabilized with regression fixes. Task 3 guide CRUD is pending.
+- Current phase: Task 2 settings UX + runtime hardening shipped. Task 3 guide CRUD is pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -237,3 +237,21 @@ When behavior changes, update this file in the same change:
 - Durable caveats:
   - Framework-private console logs (`AFIsDeviceGreymatterEligible...`, `IconRendering...binary.metallib...`) are still treated as non-blocking noise unless accompanied by functional issues.
   - Settings edits continue to apply only to new runs, never to in-flight runs.
+
+## Maintenance Update (2026-02-21, Runtime Hardening Pass)
+- What changed:
+  - Added timeout-bounded local command execution for CLI diagnostics/discovery via `CLILocalCommandRunner` (`stdout`/`stderr`/status + timeout result).
+  - Updated `CLIDiscovery`, `CLIHealthCheck`, and `ToolCapabilityDetector` to use the new local runner instead of unbounded `waitUntilExit()` calls.
+  - Extended discovery fallback candidates to include `nvm` versioned Claude binaries (`~/.nvm/versions/node/<version>/bin/claude`).
+  - Added PATH patching parity for Claude runtime execution by prepending the executable directory (same strategy already used by Codex); Codex now uses shared PATH helper directly.
+  - Added regression coverage:
+    - `CLIDiagnosticsHardeningTests` (discovery timeout fallback, health-check timeout behavior, capability timeout fallback behavior).
+    - `ProviderBehaviorTests` coverage for Claude PATH patching.
+- Why it changed:
+  - Reduce operational risk from local process hangs and environment discrepancies (especially Node-wrapper CLIs) while preserving existing app UX and run semantics.
+- How it was verified:
+  - `swift test` (59 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Timeout handling is defensive and returns safe degraded capability metadata when local help/version commands do not complete.
+  - Manual Finder-context smoke is still recommended for host-specific shell/env differences.

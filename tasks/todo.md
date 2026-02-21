@@ -63,3 +63,22 @@ Use this file to track the current task with checkable items.
 - Risks/Follow-ups:
   - Console logs from private frameworks listed in `AGENTS.md` remain non-blocking noise unless paired with functional breakage.
   - Manual in-app smoke validation is still recommended for final UX confirmation of Settings interactions.
+
+## Runtime Hardening Checklist
+- [x] Add local CLI command runner with timeout + stdout/stderr capture
+- [x] Wire timeout-backed runner into `CLIDiscovery`, `CLIHealthCheck`, and `ToolCapabilityDetector`
+- [x] Patch Claude runtime `PATH` with executable-directory prefix (parity with Codex)
+- [x] Refactor Codex runtime `PATH` construction to reuse shared helper
+- [x] Extend discovery to include `nvm` versioned candidates for Claude
+- [x] Add regression tests for discovery fallback, timeout handling, and Claude PATH patching
+- [x] Re-run full unit suite and app build
+- [ ] Manual Finder-launched smoke for Codex/Claude wrapper execution
+
+## Review (Runtime Hardening)
+- Result: Improved local runtime robustness without changing product UX. Local discovery/diagnostic processes now use bounded execution with timeout handling, Claude execution now receives the same executable-directory PATH patch strategy as Codex, and Claude discovery can resolve `~/.nvm/versions/node/<version>/bin/claude` fallbacks when shell lookup is unavailable.
+- Verification:
+  - `swift test` (59 tests passed, including new `CLIDiagnosticsHardeningTests` and new Claude PATH provider coverage)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual smoke from Finder launch context is still recommended to validate real host environment behavior with installed wrappers.
+  - Timeouts are defensive best-effort guards; pathological binaries may still produce degraded capability detail (safe fallback behavior is preserved).

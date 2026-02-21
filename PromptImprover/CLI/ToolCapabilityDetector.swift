@@ -7,9 +7,17 @@ protocol ToolCapabilityDetecting {
 
 struct ToolCapabilityDetector: ToolCapabilityDetecting {
     private let fileManager: FileManager
+    private let localCommandRunner: LocalCommandRunning
+    private let commandTimeout: TimeInterval
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        localCommandRunner: LocalCommandRunning = LocalCommandRunner(),
+        commandTimeout: TimeInterval = 5
+    ) {
         self.fileManager = fileManager
+        self.localCommandRunner = localCommandRunner
+        self.commandTimeout = commandTimeout
     }
 
     func makeSignature(tool: Tool, executableURL: URL, versionString: String?) -> ToolBinarySignature? {
@@ -108,31 +116,27 @@ struct ToolCapabilityDetector: ToolCapabilityDetecting {
     }
 
     private func runLocalCommand(executableURL: URL, arguments: [String]) -> (stdout: String, stderr: String, status: Int32) {
-        let process = Process()
-        process.executableURL = executableURL
-        process.arguments = arguments
-        process.environment = CLIExecutionEnvironment.environmentForExecutable(
+        let result = localCommandRunner.run(
             executableURL: executableURL,
-            baseEnv: ProcessInfo.processInfo.environment
+            arguments: arguments,
+            environment: CLIExecutionEnvironment.environmentForExecutable(
+                executableURL: executableURL,
+                baseEnv: ProcessInfo.processInfo.environment
+            ),
+            timeout: commandTimeout
         )
 
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
+        if let launchErrorDescription = result.launchErrorDescription {
+            Logging.debug("Capability command failed to launch: \(launchErrorDescription)")
             return ("", "", -1)
         }
 
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-        return (stdout, stderr, process.terminationStatus)
+        if result.timedOut {
+            Logging.debug("Capability command timed out for \(executableURL.lastPathComponent)")
+            return ("", "", -1)
+        }
+
+        return (result.stdout, result.stderr, result.status)
     }
 
     private static func containsModelFlag(in helpText: String) -> Bool {

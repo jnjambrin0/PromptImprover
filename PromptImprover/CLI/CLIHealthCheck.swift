@@ -1,6 +1,17 @@
 import Foundation
 
 struct CLIHealthCheck {
+    private let localCommandRunner: LocalCommandRunning
+    private let commandTimeout: TimeInterval
+
+    init(
+        localCommandRunner: LocalCommandRunning = LocalCommandRunner(),
+        commandTimeout: TimeInterval = 5
+    ) {
+        self.localCommandRunner = localCommandRunner
+        self.commandTimeout = commandTimeout
+    }
+
     func check(tool: Tool, executableURL: URL?) -> CLIAvailability {
         guard let executableURL else {
             return CLIAvailability(
@@ -12,46 +23,56 @@ struct CLIHealthCheck {
             )
         }
 
-        let process = Process()
-        process.executableURL = executableURL
-        process.arguments = ["--version"]
-        process.environment = CLIExecutionEnvironment.environmentForExecutable(
+        let result = localCommandRunner.run(
             executableURL: executableURL,
-            baseEnv: ProcessInfo.processInfo.environment
+            arguments: ["--version"],
+            environment: CLIExecutionEnvironment.environmentForExecutable(
+                executableURL: executableURL,
+                baseEnv: ProcessInfo.processInfo.environment
+            ),
+            timeout: commandTimeout
         )
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
+        if let launchErrorDescription = result.launchErrorDescription {
             return CLIAvailability(
                 tool: tool,
                 executableURL: executableURL,
                 installed: true,
                 version: nil,
-                healthMessage: "Failed to run \(tool.displayName): \(error.localizedDescription)"
+                healthMessage: "Failed to run \(tool.displayName): \(launchErrorDescription)"
             )
         }
 
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-        let versionOutput = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let errorOutput = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if process.terminationStatus == 0 {
+        if result.timedOut {
             return CLIAvailability(
                 tool: tool,
                 executableURL: executableURL,
                 installed: true,
-                version: versionOutput,
+                version: nil,
+                healthMessage: "\(tool.displayName) version check timed out."
+            )
+        }
+
+        let versionOutput = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let errorOutput = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if result.status == 0 {
+            return CLIAvailability(
+                tool: tool,
+                executableURL: executableURL,
+                installed: true,
+                version: versionOutput.isEmpty ? nil : versionOutput,
                 healthMessage: nil
             )
+        }
+
+        let failureMessage: String
+        if !errorOutput.isEmpty {
+            failureMessage = errorOutput
+        } else if !versionOutput.isEmpty {
+            failureMessage = versionOutput
+        } else {
+            failureMessage = "Unable to run \(tool.displayName)."
         }
 
         return CLIAvailability(
@@ -59,7 +80,7 @@ struct CLIHealthCheck {
             executableURL: executableURL,
             installed: true,
             version: nil,
-            healthMessage: errorOutput?.isEmpty == false ? errorOutput : "Unable to run \(tool.displayName)."
+            healthMessage: failureMessage
         )
     }
 }

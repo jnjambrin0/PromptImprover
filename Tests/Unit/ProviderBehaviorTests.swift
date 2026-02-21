@@ -451,6 +451,34 @@ struct ProviderBehaviorTests {
     }
 
     @Test
+    func claudePrependsExecutableDirectoryToPath() async throws {
+        let executableURL = try makeExecutableScript(
+            name: "fake-claude-path-check",
+            script: """
+            #!/bin/zsh
+            script_dir="$(cd "$(dirname "$0")" && pwd)"
+            case ":${PATH}:" in
+              *":$script_dir:"*) ;;
+              *)
+                echo "PATH does not include claude executable directory" >&2
+                exit 1
+                ;;
+            esac
+            echo '{"type":"result","result":"{\\"optimized_prompt\\":\\"Claude PATH patched\\"}"}'
+            """
+        )
+        defer { try? FileManager.default.removeItem(at: executableURL) }
+
+        let request = RunRequest(tool: .claude, targetModel: .claude46, inputPrompt: "Improve this.")
+        let workspace = try makeWorkspace(request: request)
+        defer { workspace.cleanup() }
+
+        let provider = ClaudeProvider(executableURL: executableURL)
+        let final = try await collectCompletedPrompt(from: provider.run(request: request, workspace: workspace))
+        #expect(final == "Claude PATH patched")
+    }
+
+    @Test
     func claudeProviderReadsWorkspaceEffortConfiguration() async throws {
         let executableURL = try makeExecutableScript(
             name: "fake-claude-workspace-effort",

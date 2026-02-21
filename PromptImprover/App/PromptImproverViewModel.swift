@@ -276,8 +276,8 @@ final class PromptImproverViewModel: ObservableObject {
             return
         }
 
-        let discovery = discovery
-        let healthCheck = healthCheck
+        let discovery = UncheckedSendableBox(value: discovery)
+        let healthCheck = UncheckedSendableBox(value: healthCheck)
         let capabilityCacheStore = UncheckedSendableBox(value: capabilityCacheStore)
 
         diagnosticsQueue.async { [weak self] in
@@ -286,8 +286,8 @@ final class PromptImproverViewModel: ObservableObject {
             var nextEntries: [Tool: CachedToolCapabilities] = [:]
 
             for tool in refreshTools {
-                let executableURL = discovery.resolve(tool: tool)
-                let availability = healthCheck.check(tool: tool, executableURL: executableURL)
+                let executableURL = discovery.value.resolve(tool: tool)
+                let availability = healthCheck.value.check(tool: tool, executableURL: executableURL)
                 nextAvailability[tool] = availability
 
                 if availability.installed,
