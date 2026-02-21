@@ -29,14 +29,23 @@ struct OutputView: View {
                 .padding(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
+                        .stroke(
+                            output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? Color.secondary.opacity(0.4)
+                                : Color.accentColor.opacity(0.5),
+                            lineWidth: 1
+                        )
                 )
                 .textSelection(.enabled)
 
             if isRunning {
-                Text("Streaming...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Streaming...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

@@ -10,6 +10,7 @@ This file is the single shared reference for code agents working in this reposit
 - Supported tools: `codex`, `claude`.
 - UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
+- Current phase: Task 1A backend shipped (engine settings + capability cache + effort gating hooks) and visual branding refresh shipped (icon/accent/button styling). Model/effort configuration UI is still pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -25,6 +26,7 @@ This file is the single shared reference for code agents working in this reposit
 - Execution/buffers/process: `PromptImprover/Execution`
 - Providers/parsers: `PromptImprover/Providers`, `PromptImprover/Providers/Parsers`
 - CLI discovery/health: `PromptImprover/CLI`
+- Settings/capability persistence: `PromptImprover/Core` (settings stores), `PromptImprover/CLI` (capability detector/cache)
 - Workspace/templates: `PromptImprover/Workspace`, `PromptImprover/Resources/templates`
 - Tests/fixtures: `Tests/Unit`, `Tests/Fixtures`
 
@@ -35,6 +37,11 @@ This file is the single shared reference for code agents working in this reposit
   - `swift test`
 - Run live CLI smoke tests (env-gated):
   - `PROMPT_IMPROVER_RUN_CLI_SMOKE=1 swift test --filter CLISmokeTests`
+
+## Research Tooling
+- MCP `apple-docs` is available and should be preferred for Apple framework APIs (SwiftUI/AppKit/Foundation), platform compatibility, WWDC references, and modern API alternatives.
+- MCP `Context7` is available and should be preferred for third-party library/framework documentation and up-to-date usage patterns.
+- For new libraries or complex features, use these tooling sources first before relying on memory-only implementation details.
 
 ## Workflow Orchestration
 ### 1) Plan Mode by Default
@@ -84,6 +91,15 @@ This file is the single shared reference for code agents working in this reposit
 - Clipboard copy uses `NSPasteboard.clearContents()` + `setString(_:forType: .string)`.
 - Output editor is read-only via no-op binding (not `.disabled`) to preserve scroll behavior.
 - `TextEditor` fields use `writingToolsBehavior(.disabled)` to reduce macOS Writing Tools noise.
+- Engine settings and capability cache persist separately under `~/Library/Application Support/PromptImprover/`:
+  - `engine_settings.json`
+  - `tool_capabilities.json`
+- Branding/UI defaults:
+  - Accent color is amber with light/dark variants from `AccentColor.colorset`.
+  - Improve CTA uses `.borderedProminent` + SF Symbol `wand.and.stars` (avoids prior custom-icon rendering issues).
+  - Stop button uses `.bordered`.
+  - Input/output editor borders use subtle accent stroke when non-empty.
+  - Streaming indicator uses accented `ProgressView`.
 
 ## Provider Pitfalls and Fixes
 - Codex auth:
@@ -137,9 +153,28 @@ When behavior changes, update this file in the same change:
 - Why it changed:
   - Implement Task 1A requirements for configurable engine model/effort settings and deterministic local capability handling without remote probing.
 - How it was verified:
-  - `swift test` (40 tests passed, including new settings/cache/gating coverage).
+  - `swift test` (42 tests passed, including new settings/cache/gating coverage).
   - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
 - Durable caveats:
   - Capability detection intentionally only executes local `--version`/`--help` commands.
   - Codex effort support falls back to a local version map (`>= 0.104.0`) when explicit help evidence is absent.
   - Capability cache invalidation never mutates or clears user engine settings (separate persistence files).
+  - Task 1A keeps model/effort configuration controls out of the UI; those editors are expected in a later UI-focused task.
+
+## Maintenance Update (2026-02-21, Visual Branding)
+- What changed:
+  - App icon set populated with generated PNGs for required macOS icon slots in `AppIcon.appiconset`.
+  - `AccentColor.colorset` updated to amber brand palette with explicit light/dark values.
+  - Added `ToolbarIcon.imageset` with template rendering intent.
+  - Updated UI styling:
+    - Improve button switched to `Label("Improve", systemImage: "wand.and.stars")` + `.borderedProminent`.
+    - Stop button now explicitly `.bordered`.
+    - Input/output editor borders now accent when content exists.
+    - Streaming indicator uses a `ProgressView` in the output panel.
+- Why it changed:
+  - Improve visual consistency and make key actions/state transitions more visible while preserving existing workflow and behavior.
+- How it was verified:
+  - `swift test` (42 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - `ToolbarIcon.imageset` exists as an asset but is not yet wired to a toolbar item in code.

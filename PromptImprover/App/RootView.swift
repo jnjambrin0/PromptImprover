@@ -43,12 +43,16 @@ struct RootView: View {
 
             if viewModel.isRunning {
                 Button("Stop", action: viewModel.stop)
+                    .buttonStyle(.bordered)
                     .keyboardShortcut(.cancelAction)
             }
 
-            Button("Improve", action: viewModel.improve)
-                .disabled(!viewModel.canImprove)
-                .keyboardShortcut(.defaultAction)
+            Button(action: viewModel.improve) {
+                Label("Improve", systemImage: "wand.and.stars")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!viewModel.canImprove)
+            .keyboardShortcut(.defaultAction)
         }
     }
 
