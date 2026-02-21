@@ -106,10 +106,26 @@ final class PromptImproverViewModel: ObservableObject {
         runningTask?.cancel()
         currentProvider?.cancel()
 
+        let resolvedEngineModel = engineSettings.resolvedDefaultEngineModel(for: selectedTool)
+        let resolvedEngineEffort = resolvedEngineModel.flatMap { model in
+            engineSettings.resolvedDefaultEffort(
+                for: selectedTool,
+                model: model,
+                capabilities: capabilitiesByTool[selectedTool]
+            )
+        }
+
+        Logging.debug(
+            "Run config tool=\(selectedTool.rawValue) target=\(selectedTargetModel.rawValue) " +
+            "engineModel=\(resolvedEngineModel ?? "none") engineEffort=\(resolvedEngineEffort?.rawValue ?? "none")"
+        )
+
         let request = RunRequest(
             tool: selectedTool,
             targetModel: selectedTargetModel,
-            inputPrompt: inputPrompt
+            inputPrompt: inputPrompt,
+            engineModel: resolvedEngineModel,
+            engineEffort: resolvedEngineEffort
         )
 
         outputPrompt = ""

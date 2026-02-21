@@ -43,6 +43,22 @@ struct RunRequest: Codable {
     let tool: Tool
     let targetModel: TargetModel
     let inputPrompt: String
+    let engineModel: String?
+    let engineEffort: EngineEffort?
+
+    init(
+        tool: Tool,
+        targetModel: TargetModel,
+        inputPrompt: String,
+        engineModel: String? = nil,
+        engineEffort: EngineEffort? = nil
+    ) {
+        self.tool = tool
+        self.targetModel = targetModel
+        self.inputPrompt = inputPrompt
+        self.engineModel = engineModel
+        self.engineEffort = engineEffort
+    }
 }
 
 enum RunStatus: Equatable {

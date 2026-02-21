@@ -48,13 +48,16 @@ final class ClaudeProvider: CLIProvider {
         continuation: AsyncThrowingStream<RunEvent, Error>.Continuation
     ) async throws -> String {
         let runPrompt = RunPromptBuilder.buildPrompt(for: request)
-        let args = [
+        var args = [
             "-p", runPrompt,
             "--output-format", "stream-json",
             "--verbose",
             "--include-partial-messages",
             "--permission-mode", "dontAsk"
         ]
+        if let model = request.engineModel?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
+            args.append(contentsOf: ["--model", model])
+        }
 
         let env = [
             "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
@@ -106,12 +109,15 @@ final class ClaudeProvider: CLIProvider {
         let runPrompt = RunPromptBuilder.buildPrompt(for: request)
         let schemaString = try String(contentsOf: workspace.schemaPath, encoding: .utf8)
 
-        let args = [
+        var args = [
             "-p", runPrompt,
             "--output-format", "json",
             "--json-schema", schemaString,
             "--permission-mode", "dontAsk"
         ]
+        if let model = request.engineModel?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
+            args.append(contentsOf: ["--model", model])
+        }
 
         let env = [
             "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",

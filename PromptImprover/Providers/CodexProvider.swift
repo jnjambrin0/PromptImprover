@@ -68,7 +68,7 @@ final class CodexProvider: CLIProvider {
     ) async throws -> String {
         let finalOutputPath = workspace.path.appendingPathComponent("codex_output.json")
         let runPrompt = RunPromptBuilder.buildPrompt(for: request)
-        let args = makeArguments(workspace: workspace, finalOutputPath: finalOutputPath)
+        let args = makeArguments(request: request, workspace: workspace, finalOutputPath: finalOutputPath)
         let env = makeEnvironment(workspace: workspace, mode: mode)
 
         let stream = processRunner.run(
@@ -118,8 +118,8 @@ final class CodexProvider: CLIProvider {
         }
     }
 
-    private func makeArguments(workspace: WorkspaceHandle, finalOutputPath: URL) -> [String] {
-        [
+    private func makeArguments(request: RunRequest, workspace: WorkspaceHandle, finalOutputPath: URL) -> [String] {
+        var arguments: [String] = [
             "exec",
             "--json",
             "--ephemeral",
@@ -127,9 +127,22 @@ final class CodexProvider: CLIProvider {
             "--skip-git-repo-check",
             "--output-schema", workspace.schemaPath.path,
             "--output-last-message", finalOutputPath.path,
+        ]
+
+        if let model = request.engineModel?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
+            arguments.append(contentsOf: ["--model", model])
+        }
+
+        if let effort = request.engineEffort {
+            arguments.append(contentsOf: ["-c", "model_reasoning_effort=\(effort.rawValue)"])
+        }
+
+        arguments.append(contentsOf: [
             "-C", workspace.path.path,
             "-"
-        ]
+        ])
+
+        return arguments
     }
 
     private func makeEnvironment(workspace: WorkspaceHandle, mode: RunMode) -> [String: String] {

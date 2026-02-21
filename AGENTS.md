@@ -10,7 +10,7 @@ This file is the single shared reference for code agents working in this reposit
 - Supported tools: `codex`, `claude`.
 - UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
-- Current phase: Task 1A backend shipped (engine settings + capability cache + effort gating hooks) and visual branding refresh shipped (icon/accent/button styling). Model/effort configuration UI is still pending.
+- Current phase: Task 1A backend + Task 1B runtime wiring shipped (engine settings, capability cache, effort gating, and provider invocation wiring). Visual branding refresh is shipped. Model/effort configuration UI is still pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -94,6 +94,7 @@ This file is the single shared reference for code agents working in this reposit
 - Engine settings and capability cache persist separately under `~/Library/Application Support/PromptImprover/`:
   - `engine_settings.json`
   - `tool_capabilities.json`
+- Engine model/effort are runtime execution settings (provider invocation), distinct from target model selection (prompt-guide selection).
 - Branding/UI defaults:
   - Accent color is amber with light/dark variants from `AccentColor.colorset`.
   - Improve CTA uses `.borderedProminent` + SF Symbol `wand.and.stars` (avoids prior custom-icon rendering issues).
@@ -178,3 +179,22 @@ When behavior changes, update this file in the same change:
   - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
 - Durable caveats:
   - `ToolbarIcon.imageset` exists as an asset but is not yet wired to a toolbar item in code.
+
+## Maintenance Update (2026-02-21, Task 1B Runtime Engine Wiring)
+- What changed:
+  - `RunRequest` now carries optional `engineModel` and `engineEffort` values resolved at run start.
+  - `PromptImproverViewModel.improve()` now resolves effective engine model/effort from persisted settings plus cached capabilities and logs effective run config in debug builds.
+  - `CodexProvider` now appends `--model <engineModel>` and `-c model_reasoning_effort=<effort>` when present.
+  - `ClaudeProvider` now appends `--model <engineModel>` for both stream and fallback JSON runs.
+  - `WorkspaceManager` now conditionally writes `.claude/settings.json` `effortLevel` inside each ephemeral run workspace for Claude runs with an effective effort.
+  - Added regression tests covering Codex/Claude effective args and workspace effort file behavior.
+- Why it changed:
+  - Implement Task 1B so engine settings influence real CLI invocation while preserving streaming behavior and strict final-output contract validation.
+- How it was verified:
+  - `swift test --filter "ProviderBehaviorTests|WorkspaceManagerTests|EffortGatingTests"` (19 tests passed).
+  - `swift test` (48 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Target model selection remains a separate concept from engine model and continues to drive prompt-guide selection.
+  - Effort is only passed when pre-resolved/gated by settings allowlist and capability support.
+  - Claude effort is applied via project-scoped `.claude/settings.json` with key `effortLevel`; invalid/missing workspace settings are safely replaced with a minimal JSON object for the run.

@@ -35,6 +35,7 @@ struct WorkspaceManager {
             try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
             try writeRuntimeFiles(request: request, root: root)
             try copyTemplates(into: root)
+            try applyClaudeEffortConfigurationIfNeeded(request: request, root: root)
             return WorkspaceHandle(path: root)
         } catch {
             try? fileManager.removeItem(at: root)
@@ -63,5 +64,29 @@ struct WorkspaceManager {
             let data = try templates.data(for: asset)
             try data.write(to: destination, options: .atomic)
         }
+    }
+
+    private func applyClaudeEffortConfigurationIfNeeded(request: RunRequest, root: URL) throws {
+        guard request.tool == .claude, let effort = request.engineEffort else {
+            return
+        }
+
+        let settingsURL = root.appendingPathComponent(".claude/settings.json")
+        try fileManager.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        var settingsObject: [String: Any] = [:]
+        if let data = try? Data(contentsOf: settingsURL),
+           let parsed = try? JSONSerialization.jsonObject(with: data),
+           let dict = parsed as? [String: Any] {
+            settingsObject = dict
+        }
+
+        settingsObject["effortLevel"] = effort.rawValue
+
+        let outputData = try JSONSerialization.data(
+            withJSONObject: settingsObject,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        try outputData.write(to: settingsURL, options: .atomic)
     }
 }
