@@ -42,6 +42,10 @@ struct RootView: View {
                 Button("Stop", action: viewModel.stop)
                     .buttonStyle(.bordered)
                     .keyboardShortcut(.cancelAction)
+                    .onHover { hovering in
+                        if hovering { NSCursor.pointingHand.push() }
+                        else { NSCursor.pop() }
+                    }
             }
 
             Button(action: viewModel.improve) {
@@ -50,6 +54,10 @@ struct RootView: View {
             .buttonStyle(.borderedProminent)
             .disabled(!viewModel.canImprove)
             .keyboardShortcut(.defaultAction)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() }
+                else { NSCursor.pop() }
+            }
         }
     }
 

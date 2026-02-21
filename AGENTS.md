@@ -124,6 +124,9 @@ These logs have been observed and are treated as system/framework noise unless p
 - `Unable to create bundle at URL ((null))`
 - `IconRendering.framework ... binary.metallib invalid format`
 
+## Expected Debug Logs
+- `[PromptImprover] Run config ...` is expected in `DEBUG` builds (from `Logging.debug`) and is not an error by itself.
+
 ## Debug-First Protocol (Mandatory)
 For regressions or user-reported failures:
 1. Reproduce first.
@@ -203,7 +206,7 @@ When behavior changes, update this file in the same change:
 - What changed:
   - Added native macOS `Settings` scene in `PromptImproverApp` with two tabs:
     - `Models`: per-tool ordered engine model list CRUD/reorder, default model picker, default effort picker, per-model effort allowlist toggles, capability status (binary path/version/last-checked), local `Recheck`, and per-tool `Reset to defaults`.
-    - `Guides`: `NavigationSplitView` placeholder scaffold with tool-scoped sidebar/detail state for upcoming Task 3 guide management.
+    - `Guides`: placeholder scaffold with tool-scoped sidebar/detail state for upcoming Task 3 guide management (later stabilized to `HSplitView` in regression fixes).
   - Moved app-wide `PromptImproverViewModel` ownership to `PromptImproverApp` (`@StateObject`) and injected into both root window and settings to keep settings/main-run state synchronized.
   - Extended engine settings model with additive `orderedEngineModels` override plus deterministic mutators/reset helpers; existing `customEngineModels` remains for backward compatibility.
   - Extended capability cache API with cached-entry retrieval (`CachedToolCapabilities`) and `forceRefresh` support while preserving existing `capabilities(...)` wrapper.
@@ -255,3 +258,15 @@ When behavior changes, update this file in the same change:
 - Durable caveats:
   - Timeout handling is defensive and returns safe degraded capability metadata when local help/version commands do not complete.
   - Manual Finder-context smoke is still recommended for host-specific shell/env differences.
+
+## Maintenance Update (2026-02-21, Concurrency Warning Cleanup)
+- What changed:
+  - Fixed Swift concurrency warnings in `PromptImproverViewModel.refreshAvailability(...)` by avoiding direct capture of non-Sendable `CLIDiscovery` and `CLIHealthCheck` instances inside `diagnosticsQueue.async` closures.
+  - Wrapped those values in existing `UncheckedSendableBox` before capture, matching the same local pattern already used for capability store capture.
+- Why it changed:
+  - Remove compile-time warning noise and keep diagnostics path compliant with stricter `@Sendable` closure checks without changing runtime behavior.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (warning removed from `PromptImproverViewModel.swift`).
+  - `swift test` (59 tests passed).
+- Durable caveats:
+  - When dispatching work to concurrent queues, avoid capturing new non-Sendable types directly; use value snapshots or explicit sendable wrappers.
