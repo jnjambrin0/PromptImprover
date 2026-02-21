@@ -28,17 +28,29 @@ final class ToolCapabilityCacheStore {
     }
 
     func capabilities(for tool: Tool, executableURL: URL, versionString: String?) -> ToolCapabilities? {
+        cachedCapabilities(for: tool, executableURL: executableURL, versionString: versionString)?.capabilities
+    }
+
+    func cachedCapabilities(
+        for tool: Tool,
+        executableURL: URL,
+        versionString: String?,
+        forceRefresh: Bool = false
+    ) -> CachedToolCapabilities? {
         guard let signature = detector.makeSignature(tool: tool, executableURL: executableURL, versionString: versionString) else {
             return nil
         }
 
         var cache = loadCache()
-        if let cached = cache.byTool[tool], cached.signature.matchesIdentity(of: signature) {
-            return cached.capabilities
+        if !forceRefresh,
+           let cached = cache.byTool[tool],
+           cached.signature.matchesIdentity(of: signature) {
+            return cached
         }
 
         let recomputed = detector.detectCapabilities(tool: tool, executableURL: executableURL, signature: signature)
-        cache.byTool[tool] = CachedToolCapabilities(signature: signature, capabilities: recomputed)
+        let updated = CachedToolCapabilities(signature: signature, capabilities: recomputed)
+        cache.byTool[tool] = updated
         loadedCache = cache
 
         do {
@@ -47,7 +59,7 @@ final class ToolCapabilityCacheStore {
             Logging.debug("Failed saving capability cache: \(error.localizedDescription)")
         }
 
-        return recomputed
+        return updated
     }
 
     static func defaultFileURL(fileManager: FileManager = .default) -> URL {

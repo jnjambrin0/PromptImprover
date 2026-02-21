@@ -10,7 +10,7 @@ This file is the single shared reference for code agents working in this reposit
 - Supported tools: `codex`, `claude`.
 - UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
-- Current phase: Task 1A backend + Task 1B runtime wiring shipped (engine settings, capability cache, effort gating, and provider invocation wiring). Visual branding refresh is shipped. Model/effort configuration UI is still pending.
+- Current phase: Task 2 settings UX shipped (native Settings with Models/Guides scaffold) and stabilized with regression fixes. Task 3 guide CRUD is pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -198,3 +198,42 @@ When behavior changes, update this file in the same change:
   - Target model selection remains a separate concept from engine model and continues to drive prompt-guide selection.
   - Effort is only passed when pre-resolved/gated by settings allowlist and capability support.
   - Claude effort is applied via project-scoped `.claude/settings.json` with key `effortLevel`; invalid/missing workspace settings are safely replaced with a minimal JSON object for the run.
+
+## Maintenance Update (2026-02-21, Task 2 Settings Window)
+- What changed:
+  - Added native macOS `Settings` scene in `PromptImproverApp` with two tabs:
+    - `Models`: per-tool ordered engine model list CRUD/reorder, default model picker, default effort picker, per-model effort allowlist toggles, capability status (binary path/version/last-checked), local `Recheck`, and per-tool `Reset to defaults`.
+    - `Guides`: `NavigationSplitView` placeholder scaffold with tool-scoped sidebar/detail state for upcoming Task 3 guide management.
+  - Moved app-wide `PromptImproverViewModel` ownership to `PromptImproverApp` (`@StateObject`) and injected into both root window and settings to keep settings/main-run state synchronized.
+  - Extended engine settings model with additive `orderedEngineModels` override plus deterministic mutators/reset helpers; existing `customEngineModels` remains for backward compatibility.
+  - Extended capability cache API with cached-entry retrieval (`CachedToolCapabilities`) and `forceRefresh` support while preserving existing `capabilities(...)` wrapper.
+  - Added background queue execution for settings persistence and CLI diagnostics/capability recheck to avoid blocking main thread.
+  - Added tests:
+    - `EngineSettingsMutationTests` for ordered override precedence, pruning invariants, and per-tool reset behavior.
+    - `EngineSettingsStoreTests` coverage for ordered override round-trip.
+    - `ToolCapabilityCacheTests` coverage for forced refresh + refreshed `lastCheckedAt`.
+- Why it changed:
+  - Implement Task 2 requirements for native settings UX, persisted engine configuration controls, and local capability visibility/recheck without changing active-run behavior.
+- How it was verified:
+  - `swift test` (53 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Settings edits apply to new runs only; in-flight runs continue using the `RunRequest` snapshot resolved at run start.
+  - Capability recheck remains strictly local (`--version`/`--help`) and does not use network probing.
+  - `orderedEngineModels` is authoritative when set; legacy files without it still resolve via `seed + custom`.
+  - Guides tab is a placeholder scaffold and intentionally omits guide CRUD/editing.
+
+## Maintenance Update (2026-02-21, Task 2 Regression Stabilization)
+- What changed:
+  - Added `CLIExecutionEnvironment` helper and applied it to `CLIHealthCheck` and `ToolCapabilityDetector` so diagnostics/capability checks always prepend the selected executable directory to `PATH`.
+  - Marked `PromptImproverViewModel.engineSettings` as `@Published` to restore immediate Settings UI refresh for model picker, effort picker, allowlist toggles, and model list mutations.
+  - Replaced `GuidesSettingsView` `NavigationSplitView` with `HSplitView` scaffold to avoid Settings-tab layout/chrome conflicts.
+  - Added `CLIEnvironmentIntegrationTests` to verify env-wrapped executables work for both version health checks and help-based capability detection.
+- Why it changed:
+  - Fix user-reported Task 2 regressions: `env: node: No such file or directory` in capability status, non-reactive Models controls, and unstable Guides tab layout in native Settings.
+- How it was verified:
+  - `swift test` (55 tests passed, including new CLI env integration tests).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Framework-private console logs (`AFIsDeviceGreymatterEligible...`, `IconRendering...binary.metallib...`) are still treated as non-blocking noise unless accompanied by functional issues.
+  - Settings edits continue to apply only to new runs, never to in-flight runs.

@@ -36,6 +36,30 @@ struct EngineSettingsStoreTests {
     }
 
     @Test
+    func roundTripsOrderedEngineModelsOverride() throws {
+        let fileURL = makeSettingsFileURL()
+        let store = EngineSettingsStore(fileURL: fileURL)
+
+        var settings = EngineSettings.default
+        settings[.codex] = ToolEngineSettings(
+            defaultEngineModel: "ordered-b",
+            defaultEffort: .medium,
+            customEngineModels: ["legacy-custom"],
+            orderedEngineModels: ["ordered-a", "ordered-b"],
+            perModelEffortAllowlist: [
+                "ordered-b": [.medium]
+            ]
+        )
+
+        try store.save(settings)
+        let loaded = store.load()
+
+        #expect(loaded[.codex].orderedEngineModels == ["ordered-a", "ordered-b"])
+        #expect(loaded.resolvedEngineModels(for: .codex) == ["ordered-a", "ordered-b"])
+        #expect(loaded[.codex].customEngineModels == ["legacy-custom"])
+    }
+
+    @Test
     func decodesPayloadWithoutSchemaVersion() throws {
         let fileURL = makeSettingsFileURL()
         let json = """

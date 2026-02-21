@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RootView: View {
-    @StateObject private var viewModel = PromptImproverViewModel()
+    @ObservedObject var viewModel: PromptImproverViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -16,9 +16,6 @@ struct RootView: View {
         }
         .padding(16)
         .frame(minWidth: 820, minHeight: 700)
-        .onAppear {
-            viewModel.refreshAvailability()
-        }
     }
 
     private var controls: some View {
@@ -75,5 +72,5 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView()
+    RootView(viewModel: PromptImproverViewModel())
 }

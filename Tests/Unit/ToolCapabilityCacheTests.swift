@@ -122,6 +122,43 @@ struct ToolCapabilityCacheTests {
         #expect(detector.detectCount == 2)
     }
 
+    @Test
+    func forceRefreshBypassesCacheAndUpdatesTimestamp() throws {
+        let detector = FakeCapabilityDetector()
+        let store = ToolCapabilityCacheStore(
+            fileURL: makeCacheFileURL(),
+            detector: detector
+        )
+
+        let executableURL = URL(fileURLWithPath: "/tmp/fake-codex")
+        let first = try #require(
+            store.cachedCapabilities(
+                for: .codex,
+                executableURL: executableURL,
+                versionString: "codex-cli 0.104.0"
+            )
+        )
+
+        detector.capabilitiesToReturn = ToolCapabilities(
+            supportsModelFlag: true,
+            supportsEffortConfig: false,
+            supportedEffortValues: []
+        )
+
+        let refreshed = try #require(
+            store.cachedCapabilities(
+                for: .codex,
+                executableURL: executableURL,
+                versionString: "codex-cli 0.104.0",
+                forceRefresh: true
+            )
+        )
+
+        #expect(detector.detectCount == 2)
+        #expect(refreshed.capabilities.supportsEffortConfig == false)
+        #expect(refreshed.signature.lastCheckedAt > first.signature.lastCheckedAt)
+    }
+
     private func makeCacheFileURL() -> URL {
         let base = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
             .appendingPathComponent("PromptImproverTests", isDirectory: true)
@@ -135,6 +172,7 @@ private final class FakeCapabilityDetector: ToolCapabilityDetecting {
     var detectCount = 0
     var mtime: TimeInterval = 100
     var size: UInt64 = 2_048
+    var signatureTimestamp: TimeInterval = 1_000
     var capabilitiesToReturn = ToolCapabilities(
         supportsModelFlag: true,
         supportsEffortConfig: true,
@@ -142,13 +180,14 @@ private final class FakeCapabilityDetector: ToolCapabilityDetecting {
     )
 
     func makeSignature(tool: Tool, executableURL: URL, versionString: String?) -> ToolBinarySignature? {
-        ToolBinarySignature(
+        defer { signatureTimestamp += 1 }
+        return ToolBinarySignature(
             tool: tool,
             path: executableURL.path,
             versionString: versionString ?? "",
             mtime: mtime,
             size: size,
-            lastCheckedAt: Date()
+            lastCheckedAt: Date(timeIntervalSince1970: signatureTimestamp)
         )
     }
 

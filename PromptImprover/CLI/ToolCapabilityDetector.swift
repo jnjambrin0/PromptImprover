@@ -111,6 +111,10 @@ struct ToolCapabilityDetector: ToolCapabilityDetecting {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
+        process.environment = CLIExecutionEnvironment.environmentForExecutable(
+            executableURL: executableURL,
+            baseEnv: ProcessInfo.processInfo.environment
+        )
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

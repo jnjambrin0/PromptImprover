@@ -15,6 +15,10 @@ struct CLIHealthCheck {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = ["--version"]
+        process.environment = CLIExecutionEnvironment.environmentForExecutable(
+            executableURL: executableURL,
+            baseEnv: ProcessInfo.processInfo.environment
+        )
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()

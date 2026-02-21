@@ -14,14 +14,18 @@ final class PromptImproverViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var availabilityByTool: [Tool: CLIAvailability] = [:]
     @Published private(set) var capabilitiesByTool: [Tool: ToolCapabilities] = [:]
+    @Published private(set) var capabilityEntriesByTool: [Tool: CachedToolCapabilities] = [:]
+    @Published private(set) var isRecheckingCapabilitiesByTool: [Tool: Bool] = [:]
 
-    private(set) var engineSettings: EngineSettings
+    @Published private(set) var engineSettings: EngineSettings
 
     private let discovery: CLIDiscovery
     private let healthCheck: CLIHealthCheck
     private let workspaceManager: WorkspaceManager
     private let engineSettingsStore: EngineSettingsStore
     private let capabilityCacheStore: ToolCapabilityCacheStore
+    private let diagnosticsQueue = DispatchQueue(label: "PromptImprover.Diagnostics", qos: .utility)
+    private let settingsPersistenceQueue = DispatchQueue(label: "PromptImprover.EngineSettingsPersistence", qos: .utility)
 
     private var runningTask: Task<Void, Never>?
     private var currentProvider: CLIProvider?
@@ -75,27 +79,16 @@ final class PromptImproverViewModel: ObservableObject {
     }
 
     func refreshAvailability() {
-        var next: [Tool: CLIAvailability] = [:]
-        var nextCapabilities: [Tool: ToolCapabilities] = [:]
+        refreshAvailability(for: Tool.allCases, forceCapabilityRefresh: false)
+    }
 
-        for tool in Tool.allCases {
-            let url = discovery.resolve(tool: tool)
-            let availability = healthCheck.check(tool: tool, executableURL: url)
-            next[tool] = availability
+    func recheckCapabilities(for tool: Tool) {
+        isRecheckingCapabilitiesByTool[tool] = true
+        refreshAvailability(for: [tool], forceCapabilityRefresh: true)
+    }
 
-            if availability.installed,
-               let executableURL = availability.executableURL,
-               let capabilities = capabilityCacheStore.capabilities(
-                    for: tool,
-                    executableURL: executableURL,
-                    versionString: availability.version
-               ) {
-                nextCapabilities[tool] = capabilities
-            }
-        }
-
-        availabilityByTool = next
-        capabilitiesByTool = nextCapabilities
+    func isRecheckingCapabilities(for tool: Tool) -> Bool {
+        isRecheckingCapabilitiesByTool[tool] == true
     }
 
     func improve() {
@@ -192,6 +185,48 @@ final class PromptImproverViewModel: ObservableObject {
         engineSettings.resolvedEngineModels(for: tool)
     }
 
+    func configuredDefaultEngineModel(for tool: Tool) -> String? {
+        engineSettings[tool].defaultEngineModel
+    }
+
+    func configuredDefaultEffort(for tool: Tool) -> EngineEffort? {
+        engineSettings[tool].defaultEffort
+    }
+
+    func configuredAllowlistedEfforts(for tool: Tool, model: String) -> [EngineEffort] {
+        engineSettings.configuredAllowlistedEfforts(for: tool, model: model)
+    }
+
+    func updateOrderedEngineModels(_ models: [String], for tool: Tool) {
+        var updated = engineSettings
+        updated.setOrderedEngineModels(models, for: tool)
+        applyEngineSettings(updated)
+    }
+
+    func updateDefaultEngineModel(_ model: String?, for tool: Tool) {
+        var updated = engineSettings
+        updated.setDefaultEngineModel(model, for: tool)
+        applyEngineSettings(updated)
+    }
+
+    func updateDefaultEffort(_ effort: EngineEffort?, for tool: Tool) {
+        var updated = engineSettings
+        updated.setDefaultEffort(effort, for: tool)
+        applyEngineSettings(updated)
+    }
+
+    func updateAllowlistedEfforts(_ efforts: [EngineEffort], for tool: Tool, model: String) {
+        var updated = engineSettings
+        updated.setAllowlistedEfforts(efforts, for: tool, model: model)
+        applyEngineSettings(updated)
+    }
+
+    func resetToolSettingsToDefaults(_ tool: Tool) {
+        var updated = engineSettings
+        updated.resetToolToDefaults(tool)
+        applyEngineSettings(updated)
+    }
+
     func resolvedDefaultEngineModel(for tool: Tool) -> String? {
         engineSettings.resolvedDefaultEngineModel(for: tool)
     }
@@ -214,6 +249,100 @@ final class PromptImproverViewModel: ObservableObject {
 
     func verifyTemplates() -> [String] {
         workspaceManager.verifyTemplateAvailability()
+    }
+
+    private func applyEngineSettings(_ updated: EngineSettings) {
+        engineSettings = updated
+        persistEngineSettings(updated)
+    }
+
+    private func persistEngineSettings(_ settings: EngineSettings) {
+        let store = UncheckedSendableBox(value: engineSettingsStore)
+        settingsPersistenceQueue.async { [store, settings] in
+            do {
+                try store.value.save(settings)
+            } catch {
+                Logging.debug("Failed saving engine settings: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func refreshAvailability(for tools: [Tool], forceCapabilityRefresh: Bool) {
+        var seen: Set<String> = []
+        let refreshTools = tools.filter { tool in
+            seen.insert(tool.rawValue).inserted
+        }
+        guard !refreshTools.isEmpty else {
+            return
+        }
+
+        let discovery = discovery
+        let healthCheck = healthCheck
+        let capabilityCacheStore = UncheckedSendableBox(value: capabilityCacheStore)
+
+        diagnosticsQueue.async { [weak self] in
+            var nextAvailability: [Tool: CLIAvailability] = [:]
+            var nextCapabilities: [Tool: ToolCapabilities] = [:]
+            var nextEntries: [Tool: CachedToolCapabilities] = [:]
+
+            for tool in refreshTools {
+                let executableURL = discovery.resolve(tool: tool)
+                let availability = healthCheck.check(tool: tool, executableURL: executableURL)
+                nextAvailability[tool] = availability
+
+                if availability.installed,
+                   let executableURL = availability.executableURL,
+                   let cached = capabilityCacheStore.value.cachedCapabilities(
+                        for: tool,
+                        executableURL: executableURL,
+                        versionString: availability.version,
+                        forceRefresh: forceCapabilityRefresh
+                   ) {
+                    nextEntries[tool] = cached
+                    nextCapabilities[tool] = cached.capabilities
+                }
+            }
+
+            let availabilitySnapshot = nextAvailability
+            let capabilitiesSnapshot = nextCapabilities
+            let entriesSnapshot = nextEntries
+
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    return
+                }
+
+                var mergedAvailability = self.availabilityByTool
+                var mergedCapabilities = self.capabilitiesByTool
+                var mergedEntries = self.capabilityEntriesByTool
+
+                for tool in refreshTools {
+                    if let availability = availabilitySnapshot[tool] {
+                        mergedAvailability[tool] = availability
+                    }
+
+                    if let capability = capabilitiesSnapshot[tool] {
+                        mergedCapabilities[tool] = capability
+                    } else {
+                        mergedCapabilities.removeValue(forKey: tool)
+                    }
+
+                    if let entry = entriesSnapshot[tool] {
+                        mergedEntries[tool] = entry
+                    } else {
+                        mergedEntries.removeValue(forKey: tool)
+                    }
+
+                    if self.isRecheckingCapabilitiesByTool[tool] == true {
+                        self.isRecheckingCapabilitiesByTool[tool] = false
+                    }
+                }
+
+                self.availabilityByTool = mergedAvailability
+                self.capabilitiesByTool = mergedCapabilities
+                self.capabilityEntriesByTool = mergedEntries
+            }
+        }
     }
 
     private func handle(_ event: RunEvent) {
@@ -266,4 +395,8 @@ final class PromptImproverViewModel: ObservableObject {
         statusMessage = "Error"
         errorMessage = error.localizedDescription
     }
+}
+
+private struct UncheckedSendableBox<Value>: @unchecked Sendable {
+    let value: Value
 }
