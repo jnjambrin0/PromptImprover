@@ -113,11 +113,13 @@ struct GuidesSettingsView: View {
             outputModelsPane
                 .frame(minWidth: 300, idealWidth: 320)
 
-            VStack(alignment: .leading, spacing: 16) {
+            VSplitView {
                 mappingPane
+                    .frame(minHeight: 260)
                 guideLibraryPane
+                    .frame(minHeight: 220)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear {
             syncSelectionAfterCatalogChange()
@@ -258,7 +260,7 @@ struct GuidesSettingsView: View {
                         }
                         .tag(guide.id)
                     }
-                    .frame(minHeight: 160)
+                    .frame(minHeight: 120, maxHeight: .infinity)
 
                     HStack(spacing: 8) {
                         Picker("Unassigned guide", selection: $selectedUnassignedGuideID) {
@@ -314,7 +316,7 @@ struct GuidesSettingsView: View {
                     }
                     .tag(guide.id)
                 }
-                .frame(minHeight: 180)
+                .frame(minHeight: 120, maxHeight: .infinity)
 
                 HStack(spacing: 8) {
                     Button("Import .md") {

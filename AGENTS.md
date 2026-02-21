@@ -1,6 +1,6 @@
 # PromptImprover Agent Guide
 
-Last updated: 2026-02-21
+Last updated: 2026-02-22
 
 ## Purpose
 This file is the single shared reference for code agents working in this repository. Keep it current, concise, and practical.
@@ -8,9 +8,9 @@ This file is the single shared reference for code agents working in this reposit
 ## Project Snapshot
 - Product: macOS SwiftUI app that improves prompts using local CLIs.
 - Supported tools: `codex`, `claude`.
-- UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
+- UX: single screen with input editor, tool picker, target output-model picker, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
-- Current phase: Task 3A guides CRUD + output-model mapping shipped. Task 3 follow-on UX refinements are pending.
+- Current phase: Task 3A guides CRUD + output-model mapping shipped, including Guides settings layout stabilization. Task 3 follow-on UX refinements are pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -96,7 +96,7 @@ This file is the single shared reference for code agents working in this reposit
   - `tool_capabilities.json`
   - `guides_catalog.json`
   - `guides/` (imported user markdown guides)
-- Engine model/effort are runtime execution settings (provider invocation), distinct from target model selection (prompt-guide selection).
+- Engine model/effort are runtime execution settings (provider invocation), distinct from target output-model selection (guide mapping selection).
 - Branding/UI defaults:
   - Accent color is amber with light/dark variants from `AccentColor.colorset`.
   - Improve CTA uses `.borderedProminent` + SF Symbol `wand.and.stars` (avoids prior custom-icon rendering issues).
@@ -312,3 +312,17 @@ When behavior changes, update this file in the same change:
   - Guides content editing remains out of scope; Task 3A supports import/mapping/persistence/runtime copy only.
   - Settings edits continue to apply only to new runs, never in-flight runs.
   - Guide deletion auto-unassigns mapping references (chosen policy), while built-in guides remain non-deletable.
+
+## Maintenance Update (2026-02-22, Guides Settings Layout Stabilization)
+- What changed:
+  - Reworked the right column of `Settings → Guides` to avoid clipped content in shorter windows.
+  - Replaced the fixed stacked right panel with a vertical split:
+    - container now uses `VSplitView` (top `Guide Mapping`, bottom `Guide Library`),
+    - both panes are resizable by the user.
+  - Reduced rigid list minimum heights and allowed each list to expand/contract within its pane (`maxHeight: .infinity`).
+- Why it changed:
+  - Fix user-reported UI regression where right-pane content exceeded available vertical space and became partially inaccessible.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Pane minimum heights (`260` for mapping, `220` for library) are intentional guardrails for control usability; adjust together if the pane contents change materially.
