@@ -5,6 +5,13 @@ struct OutputView: View {
     let isRunning: Bool
     let onCopy: () -> Void
 
+    private var readOnlyOutputBinding: Binding<String> {
+        Binding(
+            get: { output },
+            set: { _ in }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -15,15 +22,15 @@ struct OutputView: View {
                     .disabled(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
-            TextEditor(text: .constant(output))
+            TextEditor(text: readOnlyOutputBinding)
                 .font(.system(size: 13, design: .monospaced))
-                .frame(minHeight: 180)
+                .frame(height: 220)
                 .padding(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
                 )
-                .disabled(true)
+                .textSelection(.enabled)
 
             if isRunning {
                 Text("Streaming...")

@@ -9,7 +9,7 @@ struct PromptEditorView: View {
                 .font(.headline)
             TextEditor(text: $text)
                 .font(.system(size: 13, design: .monospaced))
-                .frame(minHeight: 180)
+                .frame(height: 220)
                 .padding(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)

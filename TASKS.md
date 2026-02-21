@@ -14,6 +14,7 @@
 - [x] Fix Codex discovery for `nvm` installs without `current` symlink by scanning `~/.nvm/versions/node/<version>/bin/codex` as fallback.
 - [x] Fix Codex runtime env for node-based CLI wrappers: prepend Codex executable directory to `PATH` in provider runs.
 - [x] Hide Codex intermediate stream deltas in UI output; show only final contract-validated prompt on completion.
+- [x] Ensure both `Input Prompt` and `Optimized Prompt` fields are scrollable (output remains read-only).
 - [ ] Run manual UI smoke in Xcode for AC3/AC4/AC5 evidence (streaming, stop/cancel, copy, disabled improve when tool missing).
 
 ## Testing (Action Required from You)
@@ -41,6 +42,7 @@
 - Codex discovery fix applied: fallback now scans versioned `nvm` directories (`~/.nvm/versions/node/<version>/bin/codex`) and no longer depends on `current` symlink.
 - New diagnosis (Codex runtime): binary is a `#!/usr/bin/env node` wrapper; app runtime PATH may omit node location. Fix applied by prepending Codex executable directory to `PATH` when launching provider runs.
 - UX decision applied (Codex): suppress `RunEvent.delta` emission to avoid showing model intermediate thinking; output field is now finalized only with `RunEvent.completed`.
+- UI usability fix: removed `.disabled(true)` from `Optimized Prompt` `TextEditor` (it blocked scroll interaction on macOS). Output is read-only via no-op `Binding` and both editors now use fixed visible height for reliable scrolling.
 - Root cause recorded (Claude): stream can include `tool_use.input` JSON (`file_path`, etc.); parsing that as final output caused premature `schemaMismatch` before fallback.
 - `ClaudeStreamJSONParser` now emits only `text_delta` to UI; `input_json_delta` is tolerated but hidden.
 - CLI smoke tests are env-gated via `PROMPT_IMPROVER_RUN_CLI_SMOKE=1`; current run passed for both Codex and Claude after smoke policy hardening.
@@ -93,6 +95,7 @@
 - [x] Codex discovery updated for `nvm` versioned install path fallback.
 - [x] Codex provider environment updated to include executable directory in `PATH` (fixes `env: node: No such file or directory`).
 - [x] Codex provider no longer streams intermediate deltas into output field.
+- [x] Input/Output editors adjusted to guarantee scroll behavior (output read-only but scrollable).
 - [ ] Pending manual UI smoke evidence from Xcode for AC3/AC4/AC5.
 
 ### Phase 5 - Testing, Docs, and Acceptance Validation (pending)
