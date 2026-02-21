@@ -124,11 +124,25 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/PromptImprover/Resources/templates/.claude/settings.json",
+				"$(SRCROOT)/PromptImprover/Resources/templates/AGENTS.md",
+				"$(SRCROOT)/PromptImprover/Resources/templates/CLAUDE.md",
+				"$(SRCROOT)/PromptImprover/Resources/templates/CLAUDE_PROMPT_GUIDE.md",
+				"$(SRCROOT)/PromptImprover/Resources/templates/GPT-5.2 Prompting Guide.md",
+				"$(SRCROOT)/PromptImprover/Resources/templates/GPT5.2_PROMPT_GUIDE.md",
+				"$(SRCROOT)/PromptImprover/Resources/templates/schema/optimized_prompt.schema.json",
 			);
 			name = "Copy Templates";
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/.claude/settings.json",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/AGENTS.md",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/CLAUDE.md",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/CLAUDE_PROMPT_GUIDE.md",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/GPT-5.2 Prompting Guide.md",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/GPT5.2_PROMPT_GUIDE.md",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/templates/schema/optimized_prompt.schema.json",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

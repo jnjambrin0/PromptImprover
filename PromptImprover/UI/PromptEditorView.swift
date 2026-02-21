@@ -8,6 +8,7 @@ struct PromptEditorView: View {
             Text("Input Prompt")
                 .font(.headline)
             TextEditor(text: $text)
+                .writingToolsBehavior(.disabled)
                 .font(.system(size: 13, design: .monospaced))
                 .frame(height: 220)
                 .padding(6)

@@ -23,6 +23,7 @@ struct OutputView: View {
             }
 
             TextEditor(text: readOnlyOutputBinding)
+                .writingToolsBehavior(.disabled)
                 .font(.system(size: 13, design: .monospaced))
                 .frame(height: 220)
                 .padding(6)

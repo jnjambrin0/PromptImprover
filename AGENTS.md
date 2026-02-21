@@ -1,104 +1,130 @@
-# PromptImprover Agent Knowledge Base
+# PromptImprover Agent Guide
 
 Last updated: 2026-02-21
 
-## 1) Purpose
-Use this file as the first read for any agent run in this repository. It summarizes the implementation context, non-negotiable constraints, current status, and next required validation.
+## Purpose
+This file is the single shared reference for code agents working in this repository. Keep it current, concise, and practical.
 
-## 1.1) Debug-First Change Protocol (Mandatory)
-- For regressions or user-reported failures, do not implement fixes immediately.
-- First pass must be diagnosis only:
-  - reproduce,
-  - gather concrete evidence (logs, command outputs, runtime env),
-  - isolate root cause and affected code path,
-  - propose the smallest viable fix.
-- Do not introduce architecture-level complexity unless diagnosis proves a minimal fix is insufficient.
-- Before coding, document:
-  - root cause,
-  - why previous behavior failed,
-  - why chosen fix is minimal and sufficient,
-  - what tests will prove it.
-- After fixing, verify with targeted tests first, then broader smoke/build checks.
+## Project Snapshot
+- Product: macOS SwiftUI app that improves prompts using local CLIs.
+- Supported tools: `codex`, `claude`.
+- UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
+- Status: MVP complete and validated (automated + manual smoke).
 
-## 2) Source of Truth
-- Product requirements: `PRD.md`
-- Technical design: `ARCHITECTURE.md`
-- Active execution state, checklist, and handoff: `TASKS.md`
+## Core Rules
+- CLI orchestration only. No direct API integrations from the app.
+- No chat history, no RAG/vector DB, no user-repo access outside the run workspace.
+- Per-run workspace under `/tmp/PromptImprover/run-<uuid>/` with best-effort cleanup.
+- Final user-visible output must be contract-validated prompt text only.
+- Contract: accept only JSON object with exactly one key: `optimized_prompt` (non-empty string).
+- Reject fenced output, prefixed wrappers, empty content, or schema-mismatched payloads.
 
-If this file conflicts with `PRD.md`/`ARCHITECTURE.md`, follow those documents and then update this file.
-
-## 3) Non-Negotiable Product Constraints
-- App is macOS SwiftUI and orchestrates local CLIs only: `codex` and `claude`.
-- No direct API integrations from the app.
-- No history, no RAG/vector DB, no user-repo reads/writes outside per-run temp workspace.
-- Per-run workspace is under `/tmp/PromptImprover/run-<uuid>/`.
-- Codex must run with read-only CLI sandbox flag.
-- Final user-visible output must be only the optimized prompt text.
-
-## 4) Current Architecture Snapshot
+## Architecture Map
 - App/UI: `PromptImprover/App`, `PromptImprover/UI`
 - Domain/contracts/errors: `PromptImprover/Core`
-- Process execution and streaming buffers: `PromptImprover/Execution`
-- CLI discovery/health: `PromptImprover/CLI`
+- Execution/buffers/process: `PromptImprover/Execution`
 - Providers/parsers: `PromptImprover/Providers`, `PromptImprover/Providers/Parsers`
+- CLI discovery/health: `PromptImprover/CLI`
 - Workspace/templates: `PromptImprover/Workspace`, `PromptImprover/Resources/templates`
-- Tests: `Tests/Unit`, fixtures in `Tests/Fixtures`
+- Tests/fixtures: `Tests/Unit`, `Tests/Fixtures`
 
-## 5) Current Project Status
-- Current phase from `TASKS.md`: `Phase 4 - UI Integration + Run Lifecycle (in_progress)`.
-- Implemented and verified:
-  - Single-screen UI with input, tool/model pickers, Improve/Stop, output, Copy, status.
-  - `PromptImproverViewModel` lifecycle with discovery gating, streaming, cancel/error handling.
-  - Workspace + process runner + parsers + providers (Codex and Claude with fallback JSON path).
-  - Codex provider hotfix: hybrid auth strategy (isolated `CODEX_HOME` first, automatic retry with inherited user environment when auth-like failure is detected).
-  - Codex discovery hotfix: fallback now scans `~/.nvm/versions/node/<version>/bin/codex` to support `nvm` installs without relying on `current` symlink or GUI PATH.
-  - Codex runtime env hotfix: provider prepends Codex executable directory to `PATH` so `#!/usr/bin/env node` wrappers can resolve `node` in GUI app environments.
-  - Codex UX hotfix: intermediate stream deltas are suppressed; output field is populated only with final validated `optimized_prompt`.
-  - UI editor fix: both `Input Prompt` and `Optimized Prompt` fields are scrollable; optimized output remains read-only via no-op binding (not disabled).
-  - Claude provider hotfix: final extraction ignores stream `tool_use.input` payloads and validates only final result candidates before fallback JSON-schema run.
-  - Claude streaming cleanup: parser tolerates `input_json_delta` but does not emit it as user-facing delta text.
-  - Smoke test hardening: no silent pass on `schemaMismatch`/`toolExecutionFailed`; skip only for missing binary or explicit unauthenticated precondition.
-  - Output contract hardening: accept only JSON object with exactly one key `optimized_prompt`; reject empty/fenced/prefixed outputs.
-  - Added tests for parser chunk-splits, process timeout/cancel/stdout+stderr, contract strictness.
-- Verified commands:
-  - `xcodebuild` app build succeeds.
-  - `swift test` passes.
-  - `PROMPT_IMPROVER_RUN_CLI_SMOKE=1 swift test --filter CLISmokeTests` passed in this environment.
+## Build and Test
+- Build app:
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build`
+- Run unit tests:
+  - `swift test`
+- Run live CLI smoke tests (env-gated):
+  - `PROMPT_IMPROVER_RUN_CLI_SMOKE=1 swift test --filter CLISmokeTests`
 
-## 6) Pending Gate (Blocking Completion of Phase 4)
-Manual Xcode UI smoke evidence is still required:
-- Confirm streaming output updates while running (Claude flow; Codex is intentionally final-only in output field).
-- Confirm Stop transitions to Cancelled and leaves no orphan process.
-- Confirm Copy copies exact final prompt text.
-- Confirm Improve is disabled with clear install message when selected tool is unavailable.
+## Workflow Orchestration
+### 1) Plan Mode by Default
+- Use plan mode for any non-trivial task (3+ steps, cross-file changes, or design decisions).
+- If execution deviates from plan, stop and re-plan before continuing.
+- Include verification in the plan, not only implementation.
+- Write explicit specs up front when requirements are ambiguous.
 
-Do not mark Phase 4 done until these checks are confirmed and recorded in `TASKS.md`.
+### 2) Subagent Strategy
+- Use subagents liberally to keep main context focused.
+- Offload research, exploration, and parallel analysis to subagents.
+- For complex issues, parallelize independent investigations.
+- Keep one clear objective per subagent.
 
-## 7) Decisions and Known Caveats
-- App-level macOS sandbox is disabled by design to execute user-installed binaries.
-- Timeout default is 120 seconds.
-- `Process.terminationHandler` ordering caveat is accounted for.
-- `NSPasteboard.clearContents()` then `setString(_:forType: .string)` is used for copy.
-- Known pitfall (Codex): forcing `CODEX_HOME` to a temp workspace can hide valid auth cache and cause false unauthenticated runs.
-- Decision (Codex): keep run isolation attempt, but auto-retry without overriding `CODEX_HOME` when auth failure is detected.
-- Known pitfall (Codex discovery): when Codex is installed via `nvm`, GUI/non-interactive PATH may miss `nvm` bin paths; fallback now scans versioned `nvm` directories as mitigation.
-- Known pitfall (Codex runtime): even with binary discovery, execution can fail with `env: node: No such file or directory` for node-based wrappers when GUI PATH lacks node. Provider now prepends executable directory to `PATH`.
-- Known pitfall (Codex streaming UX): JSONL event text can contain intermediate reasoning-like content. Current behavior intentionally does not surface Codex deltas in the output field.
-- Decision (UI output editor): avoid disabling `TextEditor` for read-only output because it can block scrolling on macOS; use read-only binding instead.
-- Known pitfall (Claude): stream may include `assistant.tool_use.input` JSON fragments (`file_path`, etc.); these are not final output candidates.
-- Decision (Claude): only accept final candidates from `structured_output`, `result` JSON payload, or JSON fallback run.
-- Decision (Claude parser): do not surface `input_json_delta` in UI output.
-- SwiftPM emits deprecation warnings for `swift-testing` on Swift 6 toolchains.
-- Attempting to remove `swift-testing` currently fails in this environment with `missing required module '_TestingInternals'`, so dependency remains.
-- Xcode warns that `Copy Templates` script has no declared outputs and runs every build (non-blocking).
+### 3) Self-Improvement Loop
+- After any user correction, update `tasks/lessons.md` with the mistake pattern and prevention rule.
+- Turn repeated mistakes into explicit guardrails.
+- Review relevant lessons at the start of each new session.
 
-## 8) Runbook for Next Agent
-1. Read `PRD.md`, `ARCHITECTURE.md`, and `TASKS.md`.
-2. Complete pending manual UI smoke checks (human-in-the-loop via Xcode).
-3. Update `TASKS.md`:
-   - mark Phase 4 done only if manual checks pass,
-   - advance to Phase 5 checklist and acceptance validation.
-4. Re-run:
-   - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build`
-   - `swift test`
-   - `PROMPT_IMPROVER_RUN_CLI_SMOKE=1 swift test --filter CLISmokeTests`
+### 4) Verification Before Done
+- Never mark work complete without evidence.
+- Compare behavior before/after when regression risk exists.
+- Run tests, inspect logs, and demonstrate correctness.
+- Apply a staff-level quality bar before handoff.
+
+### 5) Demand Elegance (Balanced)
+- For non-trivial changes, pause and evaluate whether a cleaner design exists.
+- Replace hacky patches with the most maintainable solution that fits scope.
+- Avoid over-engineering simple fixes.
+
+### 6) Autonomous Bug Fixing
+- For bug reports, diagnose and fix end-to-end without unnecessary user context switching.
+- Use logs, failing tests, and reproduction evidence to drive fixes.
+- Resolve failing CI-equivalent checks when possible.
+
+## Task Management
+1. Plan first: write a checklist in `tasks/todo.md`.
+2. Verify plan: confirm approach before implementation.
+3. Track progress: mark checklist items as completed as you execute.
+4. Explain changes: keep high-level rationale visible during execution.
+5. Document results: add a short review/outcome section to `tasks/todo.md`.
+6. Capture lessons: update `tasks/lessons.md` after corrections.
+
+## Key Implementation Decisions
+- App-level sandbox remains disabled to execute user-installed CLIs reliably.
+- Default run timeout: 120 seconds.
+- Clipboard copy uses `NSPasteboard.clearContents()` + `setString(_:forType: .string)`.
+- Output editor is read-only via no-op binding (not `.disabled`) to preserve scroll behavior.
+- `TextEditor` fields use `writingToolsBehavior(.disabled)` to reduce macOS Writing Tools noise.
+
+## Provider Pitfalls and Fixes
+- Codex auth:
+  - Running with isolated `CODEX_HOME` can hide valid credentials.
+  - Implemented strategy: isolated attempt first, retry with inherited environment on auth-like failure.
+- Codex discovery/runtime:
+  - Added fallback scan for `~/.nvm/versions/node/<version>/bin/codex`.
+  - Prepend codex executable directory to `PATH` for node-based wrappers (`env: node: No such file or directory` case).
+- Codex output UX:
+  - Do not show intermediate Codex deltas in output field; only final validated result.
+- Claude stream parsing:
+  - Ignore `tool_use.input` payloads as final candidates.
+  - Accept final candidates from structured result paths only; fallback schema run when needed.
+  - Tolerate `input_json_delta` but do not surface it to UI.
+
+## Known Console Noise (Non-blocking)
+These logs have been observed and are treated as system/framework noise unless paired with functional breakage:
+- `NSViewBridgeErrorCanceled`
+- `Unable to obtain a task name port right ... (0x5)`
+- `AFIsDeviceGreymatterEligible Missing entitlements for os_eligibility lookup`
+- `Unable to create bundle at URL ((null))`
+- `IconRendering.framework ... binary.metallib invalid format`
+
+## Debug-First Protocol (Mandatory)
+For regressions or user-reported failures:
+1. Reproduce first.
+2. Gather concrete evidence (app logs, command output, runtime env).
+3. Isolate root cause and affected path.
+4. Propose minimal fix.
+5. Verify with targeted tests, then broader smoke/build checks.
+
+Do not add architecture-level complexity unless evidence proves minimal fixes are insufficient.
+
+## Core Principles
+- Simplicity first: keep changes as small and local as possible.
+- No laziness: find root causes; avoid temporary or cosmetic fixes.
+- Minimal impact: modify only what is required and protect adjacent behavior.
+
+## Maintenance Rule
+When behavior changes, update this file in the same change:
+- What changed
+- Why it changed
+- How it was verified
+- Any durable caveats for future agents
