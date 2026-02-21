@@ -10,7 +10,7 @@ This file is the single shared reference for code agents working in this reposit
 - Supported tools: `codex`, `claude`.
 - UX: single screen with input editor, tool/model pickers, `Improve` / `Stop`, read-only output, `Copy`, status/error text.
 - Status: MVP complete and validated (automated + manual smoke).
-- Current phase: Task 2 settings UX + runtime hardening shipped. Task 3 guide CRUD is pending.
+- Current phase: Task 3A guides CRUD + output-model mapping shipped. Task 3 follow-on UX refinements are pending.
 
 ## Core Rules
 - CLI orchestration only. No direct API integrations from the app.
@@ -94,6 +94,8 @@ This file is the single shared reference for code agents working in this reposit
 - Engine settings and capability cache persist separately under `~/Library/Application Support/PromptImprover/`:
   - `engine_settings.json`
   - `tool_capabilities.json`
+  - `guides_catalog.json`
+  - `guides/` (imported user markdown guides)
 - Engine model/effort are runtime execution settings (provider invocation), distinct from target model selection (prompt-guide selection).
 - Branding/UI defaults:
   - Accent color is amber with light/dark variants from `AccentColor.colorset`.
@@ -270,3 +272,43 @@ When behavior changes, update this file in the same change:
   - `swift test` (59 tests passed).
 - Durable caveats:
   - When dispatching work to concurrent queues, avoid capturing new non-Sendable types directly; use value snapshots or explicit sendable wrappers.
+
+## Maintenance Update (2026-02-21, Task 3A Guides Mapping + Persistence)
+- What changed:
+  - Added guides domain and persistence:
+    - `OutputModel { displayName, slug, guideIds[] }`
+    - `GuideDoc { id, title, storagePath, isBuiltIn, updatedAt, hash? }`
+    - `GuidesCatalog` reconciliation helpers and `GuidesCatalogStore` (`guides_catalog.json`, schema versioned).
+  - Added `GuideDocumentManager` for local guide import/resolve/delete with strict import validation:
+    - markdown-only (`.md`)
+    - max size 1 MiB
+    - UTF-8 required
+    - user guides stored under Application Support `guides/`.
+  - Replaced hardcoded target model run path with persisted output model selection:
+    - main picker now uses persisted output models (built-in + user-defined),
+    - `RunRequest` now carries `targetSlug`, `targetDisplayName`, ordered `mappedGuides` snapshot.
+  - Upgraded workspace assembly:
+    - static templates remain (`AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, schema),
+    - only mapped guides are copied into `guides/` in deterministic order,
+    - `RUN_CONFIG.json` now records `{ targetSlug, guideFilenamesInOrder }`.
+  - Updated provider run prompt instructions to consume `RUN_CONFIG.json` ordered guide filenames.
+  - Implemented full Settings → Guides UI:
+    - output model CRUD (display name + slug),
+    - guide import/delete (built-ins read-only),
+    - ordered multi-guide assignment + reorder per output model,
+    - reset built-in output models and built-in mappings while preserving user entries.
+  - Added Gemini built-in guide template: `GEMINI3_PROMPT_GUIDE.md` and wired Xcode template-copy script paths.
+  - Added/updated tests:
+    - `GuidesCatalogMutationTests`
+    - `GuidesCatalogStoreTests`
+    - `GuideDocumentManagerTests`
+    - updated `WorkspaceManagerTests`, `ProviderBehaviorTests`, and `CLISmokeTests` for new run request/mapping behavior.
+- Why it changed:
+  - Implement Task 3A end-to-end: persistent guides management, ordered output-model mappings, and runtime workspace integration that is independent from execution tool selection.
+- How it was verified:
+  - `swift test` (74 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Guides content editing remains out of scope; Task 3A supports import/mapping/persistence/runtime copy only.
+  - Settings edits continue to apply only to new runs, never in-flight runs.
+  - Guide deletion auto-unassigns mapping references (chosen policy), while built-in guides remain non-deletable.

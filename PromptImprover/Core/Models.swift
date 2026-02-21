@@ -23,38 +23,28 @@ enum Tool: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-enum TargetModel: String, CaseIterable, Identifiable, Codable {
-    case claude46
-    case gpt52
-    case gemini30
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .claude46: return "Claude 4.6"
-        case .gpt52: return "GPT-5.2"
-        case .gemini30: return "Gemini 3.0"
-        }
-    }
-}
-
 struct RunRequest: Codable {
     let tool: Tool
-    let targetModel: TargetModel
+    let targetSlug: String
+    let targetDisplayName: String
+    let mappedGuides: [GuideDoc]
     let inputPrompt: String
     let engineModel: String?
     let engineEffort: EngineEffort?
 
     init(
         tool: Tool,
-        targetModel: TargetModel,
+        targetSlug: String,
+        targetDisplayName: String,
+        mappedGuides: [GuideDoc],
         inputPrompt: String,
         engineModel: String? = nil,
         engineEffort: EngineEffort? = nil
     ) {
         self.tool = tool
-        self.targetModel = targetModel
+        self.targetSlug = targetSlug
+        self.targetDisplayName = targetDisplayName
+        self.mappedGuides = mappedGuides
         self.inputPrompt = inputPrompt
         self.engineModel = engineModel
         self.engineEffort = engineEffort

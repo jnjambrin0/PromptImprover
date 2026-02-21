@@ -21,7 +21,10 @@ struct CLISmokeTests {
 
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Summarize this in one sentence: Swift is a language.")
+        let request = makeRequest(
+            tool: .codex,
+            inputPrompt: "Summarize this in one sentence: Swift is a language."
+        )
         let workspace = try manager.createRunWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -60,7 +63,10 @@ struct CLISmokeTests {
 
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
-        let request = RunRequest(tool: .claude, targetModel: .claude46, inputPrompt: "Explain recursion simply.")
+        let request = makeRequest(
+            tool: .claude,
+            inputPrompt: "Explain recursion simply."
+        )
         let workspace = try manager.createRunWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -83,5 +89,19 @@ struct CLISmokeTests {
 
         #expect(finalPrompt != nil)
         #expect(!(finalPrompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    private func makeRequest(tool: Tool, inputPrompt: String) -> RunRequest {
+        let catalog = GuidesCatalog.default
+        let targetSlug = (tool == .claude) ? GuidesDefaults.claudeOutputSlug : GuidesDefaults.gptOutputSlug
+        let outputModel = catalog.outputModel(slug: targetSlug) ?? catalog.outputModels.first!
+
+        return RunRequest(
+            tool: tool,
+            targetSlug: outputModel.slug,
+            targetDisplayName: outputModel.displayName,
+            mappedGuides: catalog.orderedGuides(forOutputSlug: outputModel.slug),
+            inputPrompt: inputPrompt
+        )
     }
 }

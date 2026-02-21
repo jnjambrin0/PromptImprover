@@ -30,7 +30,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .codex)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -52,7 +52,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .codex)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -81,7 +81,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .codex)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -129,7 +129,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .codex)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -160,7 +160,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .codex)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -231,10 +231,8 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(
+        let request = makeRequest(
             tool: .codex,
-            targetModel: .gpt52,
-            inputPrompt: "Improve this.",
             engineModel: "gpt-5-mini",
             engineEffort: .high
         )
@@ -293,10 +291,8 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(
+        let request = makeRequest(
             tool: .codex,
-            targetModel: .gpt52,
-            inputPrompt: "Improve this.",
             engineModel: "gpt-5",
             engineEffort: nil
         )
@@ -340,7 +336,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .claude, targetModel: .claude46, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .claude)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -381,7 +377,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .claude, targetModel: .claude46, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .claude)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -435,10 +431,8 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(
+        let request = makeRequest(
             tool: .claude,
-            targetModel: .claude46,
-            inputPrompt: "Improve this.",
             engineModel: "claude-opus-4-6",
             engineEffort: nil
         )
@@ -469,7 +463,7 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(tool: .claude, targetModel: .claude46, inputPrompt: "Improve this.")
+        let request = makeRequest(tool: .claude)
         let workspace = try makeWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -515,10 +509,8 @@ struct ProviderBehaviorTests {
         )
         defer { try? FileManager.default.removeItem(at: executableURL) }
 
-        let request = RunRequest(
+        let request = makeRequest(
             tool: .claude,
-            targetModel: .claude46,
-            inputPrompt: "Improve this.",
             engineModel: "claude-opus-4-6",
             engineEffort: .high
         )
@@ -528,6 +520,34 @@ struct ProviderBehaviorTests {
         let provider = ClaudeProvider(executableURL: executableURL)
         let final = try await collectCompletedPrompt(from: provider.run(request: request, workspace: workspace))
         #expect(final == "Prompt from effort-configured workspace")
+    }
+
+    private func makeRequest(
+        tool: Tool,
+        inputPrompt: String = "Improve this.",
+        targetSlug: String? = nil,
+        engineModel: String? = nil,
+        engineEffort: EngineEffort? = nil
+    ) -> RunRequest {
+        let catalog = GuidesCatalog.default
+        let fallbackSlug: String
+        if let targetSlug {
+            fallbackSlug = targetSlug
+        } else {
+            fallbackSlug = (tool == .claude) ? GuidesDefaults.claudeOutputSlug : GuidesDefaults.gptOutputSlug
+        }
+
+        let outputModel = catalog.outputModel(slug: fallbackSlug) ?? catalog.outputModels.first!
+
+        return RunRequest(
+            tool: tool,
+            targetSlug: outputModel.slug,
+            targetDisplayName: outputModel.displayName,
+            mappedGuides: catalog.orderedGuides(forOutputSlug: outputModel.slug),
+            inputPrompt: inputPrompt,
+            engineModel: engineModel,
+            engineEffort: engineEffort
+        )
     }
 
     private func makeWorkspace(request: RunRequest) throws -> WorkspaceHandle {

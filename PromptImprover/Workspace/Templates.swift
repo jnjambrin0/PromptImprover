@@ -4,8 +4,6 @@ enum TemplateAsset: CaseIterable {
     case agents
     case claude
     case claudeSettings
-    case claudeGuide
-    case gptGuide
     case schema
 
     var relativePath: String {
@@ -13,8 +11,6 @@ enum TemplateAsset: CaseIterable {
         case .agents: return "AGENTS.md"
         case .claude: return "CLAUDE.md"
         case .claudeSettings: return ".claude/settings.json"
-        case .claudeGuide: return "CLAUDE_PROMPT_GUIDE.md"
-        case .gptGuide: return "GPT5.2_PROMPT_GUIDE.md"
         case .schema: return "schema/optimized_prompt.schema.json"
         }
     }
@@ -30,15 +26,19 @@ struct Templates {
     }
 
     func data(for asset: TemplateAsset) throws -> Data {
-        if let bundled = bundledURL(for: asset) {
+        try data(forRelativePath: asset.relativePath)
+    }
+
+    func data(forRelativePath relativePath: String) throws -> Data {
+        if let bundled = bundledURL(forRelativePath: relativePath) {
             return try Data(contentsOf: bundled)
         }
 
-        if let fallback = fallbackURL(for: asset), FileManager.default.fileExists(atPath: fallback.path) {
+        if let fallback = fallbackURL(forRelativePath: relativePath), FileManager.default.fileExists(atPath: fallback.path) {
             return try Data(contentsOf: fallback)
         }
 
-        throw PromptImproverError.workspaceFailure("Missing template: \(asset.relativePath)")
+        throw PromptImproverError.workspaceFailure("Missing template: \(relativePath)")
     }
 
     func verifyAllAccessible() -> [String] {
@@ -53,8 +53,8 @@ struct Templates {
         return missing
     }
 
-    private func bundledURL(for asset: TemplateAsset) -> URL? {
-        let nsPath = asset.relativePath as NSString
+    private func bundledURL(forRelativePath relativePath: String) -> URL? {
+        let nsPath = relativePath as NSString
         let directory = nsPath.deletingLastPathComponent
         let fileName = nsPath.lastPathComponent
         let ext = (fileName as NSString).pathExtension
@@ -70,13 +70,13 @@ struct Templates {
         return bundle.url(forResource: name, withExtension: ext.isEmpty ? nil : ext, subdirectory: subdirectory)
     }
 
-    private func fallbackURL(for asset: TemplateAsset) -> URL? {
+    private func fallbackURL(forRelativePath relativePath: String) -> URL? {
         if let fallbackRoot {
-            return fallbackRoot.appendingPathComponent(asset.relativePath)
+            return fallbackRoot.appendingPathComponent(relativePath)
         }
 
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let defaultRoot = cwd.appendingPathComponent("PromptImprover/Resources/templates", isDirectory: true)
-        return defaultRoot.appendingPathComponent(asset.relativePath)
+        return defaultRoot.appendingPathComponent(relativePath)
     }
 }

@@ -28,13 +28,14 @@ struct RootView: View {
             .pickerStyle(.menu)
             .frame(width: 220)
 
-            Picker("Target model", selection: $viewModel.selectedTargetModel) {
-                ForEach(TargetModel.allCases) { model in
-                    Text(model.displayName).tag(model)
+            Picker("Target output model", selection: $viewModel.selectedTargetSlug) {
+                ForEach(viewModel.outputModels) { model in
+                    Text(model.displayName).tag(model.slug)
                 }
             }
             .pickerStyle(.menu)
             .frame(width: 220)
+            .disabled(viewModel.outputModels.isEmpty)
 
             Spacer()
 

@@ -82,3 +82,26 @@ Use this file to track the current task with checkable items.
 - Risks/Follow-ups:
   - Manual smoke from Finder launch context is still recommended to validate real host environment behavior with installed wrappers.
   - Timeouts are defensive best-effort guards; pathological binaries may still produce degraded capability detail (safe fallback behavior is preserved).
+
+## Task 3A Checklist
+- [x] Replace hardcoded target model enum run-path usage with persisted output model slug/display + ordered guide snapshot in `RunRequest`
+- [x] Add guides domain model (`OutputModel`, `GuideDoc`, `GuidesCatalog`) with normalization/reconciliation helpers
+- [x] Add versioned `GuidesCatalogStore` persistence under Application Support
+- [x] Add `GuideDocumentManager` import/resolve/delete support with `.md` + size + UTF-8 validation
+- [x] Add Gemini built-in guide template and seed default output models/mappings (`claude-4-6`, `gpt-5-2`, `gemini-3-0`)
+- [x] Update workspace builder to copy only mapped guides in strict order and write structured `RUN_CONFIG.json`
+- [x] Update provider prompt instructions to read ordered guides from `RUN_CONFIG.json`
+- [x] Drive main-screen target picker from persisted output models
+- [x] Implement full Settings → Guides UI (output model CRUD, guide import/delete, ordered mapping + reorder, reset built-ins)
+- [x] Add tests for catalog mutations, catalog store, guide import validation, and workspace copy/run-config semantics
+- [x] Re-run full unit suite and macOS app build
+- [ ] Manual in-app smoke of Guides settings flows (import dialogs + CRUD UX) in running app
+
+## Review (Task 3A)
+- Result: Implemented end-to-end Guides mapping with persisted output models and ordered multi-guide assignments, independent from execution tool selection. Main run selection now uses persisted output-model slugs/display names; workspace assembly now includes only mapped guides in defined order and emits deterministic `RUN_CONFIG.json` (`targetSlug`, ordered filenames).
+- Verification:
+  - `swift test` (74 tests passed; includes new `GuidesCatalogMutationTests`, `GuidesCatalogStoreTests`, `GuideDocumentManagerTests`, updated workspace/provider/smoke coverage)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI smoke is still recommended for file importer UX and confirmation dialogs in Settings → Guides.
+  - In-app guide content editing remains intentionally out of scope; Task 3A covers import/mapping/persistence/runtime integration only.

@@ -12,6 +12,8 @@ enum PromptImproverError: LocalizedError {
     case lineTooLong(limitBytes: Int)
     case bufferOverflow(limitBytes: Int)
     case workspaceFailure(String)
+    case guideImportFailed(String)
+    case guideManagementFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -39,6 +41,10 @@ enum PromptImproverError: LocalizedError {
         case .bufferOverflow:
             return "Streaming parser exceeded max buffer size."
         case .workspaceFailure(let details):
+            return details
+        case .guideImportFailed(let details):
+            return details
+        case .guideManagementFailed(let details):
             return details
         }
     }

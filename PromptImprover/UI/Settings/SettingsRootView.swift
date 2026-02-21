@@ -10,7 +10,7 @@ struct SettingsRootView: View {
                     Label("Models", systemImage: "slider.horizontal.3")
                 }
 
-            GuidesSettingsView()
+            GuidesSettingsView(viewModel: viewModel)
                 .tabItem {
                     Label("Guides", systemImage: "book")
                 }

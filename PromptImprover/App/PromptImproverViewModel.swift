@@ -8,7 +8,7 @@ final class PromptImproverViewModel: ObservableObject {
     @Published var inputPrompt: String = ""
     @Published var outputPrompt: String = ""
     @Published var selectedTool: Tool = .codex
-    @Published var selectedTargetModel: TargetModel = .gpt52
+    @Published var selectedTargetSlug: String = ""
     @Published var status: RunStatus = .idle
     @Published var statusMessage: String = "Idle"
     @Published var errorMessage: String?
@@ -18,14 +18,18 @@ final class PromptImproverViewModel: ObservableObject {
     @Published private(set) var isRecheckingCapabilitiesByTool: [Tool: Bool] = [:]
 
     @Published private(set) var engineSettings: EngineSettings
+    @Published private(set) var guidesCatalog: GuidesCatalog
 
     private let discovery: CLIDiscovery
     private let healthCheck: CLIHealthCheck
     private let workspaceManager: WorkspaceManager
     private let engineSettingsStore: EngineSettingsStore
     private let capabilityCacheStore: ToolCapabilityCacheStore
+    private let guidesCatalogStore: GuidesCatalogStore
+    private let guideDocumentManager: any GuideDocumentManaging
     private let diagnosticsQueue = DispatchQueue(label: "PromptImprover.Diagnostics", qos: .utility)
     private let settingsPersistenceQueue = DispatchQueue(label: "PromptImprover.EngineSettingsPersistence", qos: .utility)
+    private let guidesPersistenceQueue = DispatchQueue(label: "PromptImprover.GuidesPersistence", qos: .utility)
 
     private var runningTask: Task<Void, Never>?
     private var currentProvider: CLIProvider?
@@ -35,14 +39,21 @@ final class PromptImproverViewModel: ObservableObject {
         healthCheck: CLIHealthCheck = CLIHealthCheck(),
         workspaceManager: WorkspaceManager = WorkspaceManager(),
         engineSettingsStore: EngineSettingsStore = EngineSettingsStore(),
-        capabilityCacheStore: ToolCapabilityCacheStore = ToolCapabilityCacheStore()
+        capabilityCacheStore: ToolCapabilityCacheStore = ToolCapabilityCacheStore(),
+        guidesCatalogStore: GuidesCatalogStore = GuidesCatalogStore(),
+        guideDocumentManager: any GuideDocumentManaging = GuideDocumentManager()
     ) {
         self.discovery = discovery
         self.healthCheck = healthCheck
         self.workspaceManager = workspaceManager
         self.engineSettingsStore = engineSettingsStore
         self.capabilityCacheStore = capabilityCacheStore
+        self.guidesCatalogStore = guidesCatalogStore
+        self.guideDocumentManager = guideDocumentManager
         self.engineSettings = engineSettingsStore.load()
+        let loadedCatalog = guidesCatalogStore.load().reconciled()
+        self.guidesCatalog = loadedCatalog
+        self.selectedTargetSlug = loadedCatalog.outputModels.first?.slug ?? ""
         refreshAvailability()
     }
 
@@ -58,9 +69,25 @@ final class PromptImproverViewModel: ObservableObject {
         capabilitiesByTool[selectedTool]
     }
 
+    var outputModels: [OutputModel] {
+        guidesCatalog.outputModels
+    }
+
+    var guides: [GuideDoc] {
+        guidesCatalog.guides
+    }
+
     var improveDisabledReason: String? {
         if inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "Enter a prompt to improve."
+        }
+
+        if guidesCatalog.outputModels.isEmpty {
+            return "Add at least one target output model in Settings → Guides."
+        }
+
+        if selectedOutputModel() == nil {
+            return "Select a valid target output model."
         }
 
         guard let availability = selectedToolAvailability else {
@@ -96,6 +123,14 @@ final class PromptImproverViewModel: ObservableObject {
             return
         }
 
+        guard let outputModel = selectedOutputModel() else {
+            applyError(PromptImproverError.guideManagementFailed("No valid target output model is selected."))
+            return
+        }
+        if guidesCatalog.outputModel(slug: selectedTargetSlug) == nil {
+            selectedTargetSlug = outputModel.slug
+        }
+
         runningTask?.cancel()
         currentProvider?.cancel()
 
@@ -109,13 +144,15 @@ final class PromptImproverViewModel: ObservableObject {
         }
 
         Logging.debug(
-            "Run config tool=\(selectedTool.rawValue) target=\(selectedTargetModel.rawValue) " +
+            "Run config tool=\(selectedTool.rawValue) target=\(outputModel.slug) " +
             "engineModel=\(resolvedEngineModel ?? "none") engineEffort=\(resolvedEngineEffort?.rawValue ?? "none")"
         )
 
         let request = RunRequest(
             tool: selectedTool,
-            targetModel: selectedTargetModel,
+            targetSlug: outputModel.slug,
+            targetDisplayName: outputModel.displayName,
+            mappedGuides: guidesCatalog.orderedGuides(forOutputSlug: outputModel.slug),
             inputPrompt: inputPrompt,
             engineModel: resolvedEngineModel,
             engineEffort: resolvedEngineEffort
@@ -247,6 +284,142 @@ final class PromptImproverViewModel: ObservableObject {
         )
     }
 
+    func normalizedOutputModelSlug(from raw: String?) -> String? {
+        GuidesCatalog.normalizeSlug(raw)
+    }
+
+    func outputModel(forSlug slug: String) -> OutputModel? {
+        guidesCatalog.outputModel(slug: slug)
+    }
+
+    func orderedGuides(forOutputSlug slug: String) -> [GuideDoc] {
+        guidesCatalog.orderedGuides(forOutputSlug: slug)
+    }
+
+    func unassignedGuides(forOutputSlug slug: String) -> [GuideDoc] {
+        let assigned = Set(orderedGuides(forOutputSlug: slug).map { $0.id.lowercased() })
+        return guidesCatalog.guides.filter { !assigned.contains($0.id.lowercased()) }
+    }
+
+    @discardableResult
+    func addOutputModel(displayName: String, slug: String) throws -> OutputModel {
+        var updated = guidesCatalog
+        do {
+            let model = try updated.addOutputModel(displayName: displayName, slug: slug)
+            applyGuidesCatalog(updated, preferredSelectedSlug: model.slug)
+            return model
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func updateOutputModel(existingSlug: String, displayName: String, slug: String) throws -> OutputModel {
+        var updated = guidesCatalog
+        do {
+            let model = try updated.updateOutputModel(existingSlug: existingSlug, displayName: displayName, slug: slug)
+            applyGuidesCatalog(updated, preferredSelectedSlug: model.slug)
+            return model
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func deleteOutputModel(slug: String) -> OutputModel? {
+        var updated = guidesCatalog
+        let removed = updated.removeOutputModel(slug: slug)
+        applyGuidesCatalog(updated)
+        return removed
+    }
+
+    func assignGuide(_ guideID: String, toOutputModel slug: String) throws {
+        var updated = guidesCatalog
+        do {
+            try updated.appendGuide(guideID, toOutputModel: slug)
+            applyGuidesCatalog(updated, preferredSelectedSlug: slug)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    func unassignGuide(_ guideID: String, fromOutputModel slug: String) throws {
+        var updated = guidesCatalog
+        do {
+            try updated.removeGuide(guideID, fromOutputModel: slug)
+            applyGuidesCatalog(updated, preferredSelectedSlug: slug)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    func moveGuideUp(_ guideID: String, inOutputModel slug: String) throws {
+        let ordered = guidesCatalog.orderedGuides(forOutputSlug: slug)
+        guard let index = ordered.firstIndex(where: { $0.id.caseInsensitiveCompare(guideID) == .orderedSame }),
+              index > 0 else {
+            return
+        }
+
+        var updated = guidesCatalog
+        do {
+            try updated.moveGuide(forOutputModel: slug, from: index, to: index - 1)
+            applyGuidesCatalog(updated, preferredSelectedSlug: slug)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    func moveGuideDown(_ guideID: String, inOutputModel slug: String) throws {
+        let ordered = guidesCatalog.orderedGuides(forOutputSlug: slug)
+        guard let index = ordered.firstIndex(where: { $0.id.caseInsensitiveCompare(guideID) == .orderedSame }),
+              index < ordered.count - 1 else {
+            return
+        }
+
+        var updated = guidesCatalog
+        do {
+            try updated.moveGuide(forOutputModel: slug, from: index, to: index + 1)
+            applyGuidesCatalog(updated, preferredSelectedSlug: slug)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func importGuide(from sourceURL: URL) throws -> GuideDoc {
+        let imported = try guideDocumentManager.importGuide(from: sourceURL)
+        var updated = guidesCatalog
+        updated.upsertGuide(imported)
+        applyGuidesCatalog(updated)
+        return imported
+    }
+
+    func deleteGuide(id: String) throws {
+        guard let existing = guidesCatalog.guide(id: id) else {
+            return
+        }
+
+        guard !existing.isBuiltIn else {
+            throw PromptImproverError.guideManagementFailed("Built-in guides are read-only and cannot be deleted.")
+        }
+
+        try guideDocumentManager.deleteUserGuideFileIfPresent(for: existing)
+
+        var updated = guidesCatalog
+        do {
+            _ = try updated.deleteGuide(id: id)
+            applyGuidesCatalog(updated)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    func resetBuiltInOutputModelsAndMappings() {
+        var updated = guidesCatalog
+        updated.resetBuiltInsPreservingUserEntries()
+        applyGuidesCatalog(updated)
+    }
+
     func verifyTemplates() -> [String] {
         workspaceManager.verifyTemplateAvailability()
     }
@@ -265,6 +438,71 @@ final class PromptImproverViewModel: ObservableObject {
                 Logging.debug("Failed saving engine settings: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func applyGuidesCatalog(_ updated: GuidesCatalog, preferredSelectedSlug: String? = nil) {
+        let reconciled = updated.reconciled()
+        guidesCatalog = reconciled
+        selectedTargetSlug = resolvedTargetSelection(in: reconciled, preferredSelectedSlug: preferredSelectedSlug)
+        persistGuidesCatalog(reconciled)
+    }
+
+    private func persistGuidesCatalog(_ catalog: GuidesCatalog) {
+        let store = UncheckedSendableBox(value: guidesCatalogStore)
+        guidesPersistenceQueue.async { [store, catalog] in
+            do {
+                try store.value.save(catalog)
+            } catch {
+                Logging.debug("Failed saving guides catalog: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func resolvedTargetSelection(in catalog: GuidesCatalog, preferredSelectedSlug: String?) -> String {
+        if let preferredSelectedSlug,
+           let resolvedPreferred = catalog.outputModel(slug: preferredSelectedSlug) {
+            return resolvedPreferred.slug
+        }
+
+        if let current = catalog.outputModel(slug: selectedTargetSlug) {
+            return current.slug
+        }
+
+        return catalog.outputModels.first?.slug ?? ""
+    }
+
+    private func selectedOutputModel() -> OutputModel? {
+        if let selected = guidesCatalog.outputModel(slug: selectedTargetSlug) {
+            return selected
+        }
+        return guidesCatalog.outputModels.first
+    }
+
+    private func mapGuidesError(_ error: Error) -> PromptImproverError {
+        if let appError = error as? PromptImproverError {
+            return appError
+        }
+
+        if let catalogError = error as? GuidesCatalogError {
+            switch catalogError {
+            case .invalidDisplayName:
+                return .guideManagementFailed("Output model display name cannot be empty.")
+            case .invalidSlug:
+                return .guideManagementFailed("Output model slug is invalid. Use letters, numbers, and separators.")
+            case .duplicateSlug:
+                return .guideManagementFailed("An output model with this slug already exists.")
+            case .outputModelNotFound:
+                return .guideManagementFailed("Output model not found.")
+            case .guideNotFound:
+                return .guideManagementFailed("Guide not found.")
+            case .cannotDeleteBuiltInGuide:
+                return .guideManagementFailed("Built-in guides are read-only and cannot be deleted.")
+            case .invalidGuideOrder:
+                return .guideManagementFailed("Guide reorder request is invalid.")
+            }
+        }
+
+        return .guideManagementFailed(error.localizedDescription)
     }
 
     private func refreshAvailability(for tools: [Tool], forceCapabilityRefresh: Bool) {

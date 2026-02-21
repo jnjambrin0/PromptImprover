@@ -20,10 +20,17 @@ struct WorkspaceHandle {
 struct WorkspaceManager {
     private let fileManager: FileManager
     private let templates: Templates
+    private let guideDocumentManager: any GuideDocumentManaging
 
-    init(fileManager: FileManager = .default, templates: Templates = Templates()) {
+    init(
+        fileManager: FileManager = .default,
+        templates: Templates = Templates(),
+        guideDocumentManager: (any GuideDocumentManaging)? = nil
+    ) {
         self.fileManager = fileManager
         self.templates = templates
+        self.guideDocumentManager = guideDocumentManager
+            ?? GuideDocumentManager(fileManager: fileManager, templates: templates)
     }
 
     func createRunWorkspace(request: RunRequest) throws -> WorkspaceHandle {
@@ -33,8 +40,10 @@ struct WorkspaceManager {
 
         do {
             try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-            try writeRuntimeFiles(request: request, root: root)
+            try writeInputAndTargetFiles(request: request, root: root)
             try copyTemplates(into: root)
+            let guideFilenames = try copyMappedGuides(request: request, into: root)
+            try writeRunConfig(targetSlug: request.targetSlug, guideFilenamesInOrder: guideFilenames, root: root)
             try applyClaudeEffortConfigurationIfNeeded(request: request, root: root)
             return WorkspaceHandle(path: root)
         } catch {
@@ -47,12 +56,21 @@ struct WorkspaceManager {
         templates.verifyAllAccessible()
     }
 
-    private func writeRuntimeFiles(request: RunRequest, root: URL) throws {
+    private func writeInputAndTargetFiles(request: RunRequest, root: URL) throws {
         try request.inputPrompt.write(to: root.appendingPathComponent("INPUT_PROMPT.txt"), atomically: true, encoding: .utf8)
-        try request.targetModel.displayName.write(to: root.appendingPathComponent("TARGET_MODEL.txt"), atomically: true, encoding: .utf8)
+        try request.targetDisplayName.write(to: root.appendingPathComponent("TARGET_MODEL.txt"), atomically: true, encoding: .utf8)
+    }
 
-        let runConfig = try JSONEncoder().encode(request)
-        try runConfig.write(to: root.appendingPathComponent("RUN_CONFIG.json"), options: .atomic)
+    private func writeRunConfig(targetSlug: String, guideFilenamesInOrder: [String], root: URL) throws {
+        let runConfig = WorkspaceRunConfig(
+            targetSlug: targetSlug,
+            guideFilenamesInOrder: guideFilenamesInOrder
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(runConfig)
+        try data.write(to: root.appendingPathComponent("RUN_CONFIG.json"), options: .atomic)
     }
 
     private func copyTemplates(into root: URL) throws {
@@ -64,6 +82,27 @@ struct WorkspaceManager {
             let data = try templates.data(for: asset)
             try data.write(to: destination, options: .atomic)
         }
+    }
+
+    private func copyMappedGuides(request: RunRequest, into root: URL) throws -> [String] {
+        guard !request.mappedGuides.isEmpty else {
+            return []
+        }
+
+        let guidesRoot = root.appendingPathComponent("guides", isDirectory: true)
+        try fileManager.createDirectory(at: guidesRoot, withIntermediateDirectories: true)
+
+        var guideFilenamesInOrder: [String] = []
+        for (index, guide) in request.mappedGuides.enumerated() {
+            let safeGuideID = sanitizedFilenameComponent(guide.id)
+            let relativePath = String(format: "guides/%03d-%@.md", index + 1, safeGuideID)
+            let destination = root.appendingPathComponent(relativePath)
+            let data = try guideDocumentManager.data(for: guide)
+            try data.write(to: destination, options: .atomic)
+            guideFilenamesInOrder.append(relativePath)
+        }
+
+        return guideFilenamesInOrder
     }
 
     private func applyClaudeEffortConfigurationIfNeeded(request: RunRequest, root: URL) throws {
@@ -89,4 +128,23 @@ struct WorkspaceManager {
         )
         try outputData.write(to: settingsURL, options: .atomic)
     }
+
+    private func sanitizedFilenameComponent(_ raw: String) -> String {
+        let replaced = raw.lowercased().map { character -> Character in
+            if character.isLetter || character.isNumber || character == "-" || character == "_" {
+                return character
+            }
+            return "-"
+        }
+
+        var normalized = String(replaced)
+        normalized = normalized.replacingOccurrences(of: "-{2,}", with: "-", options: .regularExpression)
+        normalized = normalized.trimmingCharacters(in: CharacterSet(charactersIn: "-_"))
+        return normalized.isEmpty ? "guide" : normalized
+    }
+}
+
+private struct WorkspaceRunConfig: Codable {
+    let targetSlug: String
+    let guideFilenamesInOrder: [String]
 }

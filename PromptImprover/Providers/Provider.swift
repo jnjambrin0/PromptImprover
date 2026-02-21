@@ -8,9 +8,10 @@ protocol CLIProvider: AnyObject {
 enum RunPromptBuilder {
     static func buildPrompt(for request: RunRequest) -> String {
         """
-        Read INPUT_PROMPT.txt and TARGET_MODEL.txt in the current directory.
-        Use CLAUDE_PROMPT_GUIDE.md for Claude 4.6 targets and GPT5.2_PROMPT_GUIDE.md for GPT-5.2 targets.
-        For Gemini 3.0, use general prompt engineering best practices.
+        Read INPUT_PROMPT.txt, TARGET_MODEL.txt, and RUN_CONFIG.json in the current directory.
+        In RUN_CONFIG.json, follow guideFilenamesInOrder exactly in listed order.
+        Read and apply each guide file from guideFilenamesInOrder as ordered prompt-improvement guidance.
+        If guideFilenamesInOrder is empty, use general prompt-engineering best practices.
 
         Improve the prompt for the target model.
 

@@ -6,12 +6,16 @@ Prompt Improver is a native macOS SwiftUI app that improves prompts using local 
 - Single-screen UX.
 - Input prompt editor.
 - Tool picker (`Codex CLI`, `Claude Code`).
-- Target model picker (`Claude 4.6`, `GPT-5.2`, `Gemini 3.0`).
+- Target output model picker driven by Settings → Guides (built-in + user-defined).
 - Streaming output while running.
 - Strict final output contract:
   - JSON schema `{ "optimized_prompt": "..." }`
   - rendered output is plain optimized prompt only.
 - `Stop` cancellation and `Copy` output button.
+- Guides settings:
+  - import Markdown guides (`.md`) into local Application Support storage,
+  - create/edit/delete output models (`displayName`, `slug`),
+  - map ordered guide lists per output model.
 
 ## Safety Model
 - No direct API integrations from the app.

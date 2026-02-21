@@ -4,11 +4,11 @@ import Testing
 
 struct WorkspaceManagerTests {
     @Test
-    func workspaceContainsRuntimeFilesAndTemplates() throws {
+    func workspaceContainsRuntimeFilesAndStaticTemplates() throws {
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Hello")
+        let request = makeRequest(tool: .codex, mappedGuides: [])
         let workspace = try manager.createRunWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -17,8 +17,69 @@ struct WorkspaceManagerTests {
         #expect(FileManager.default.fileExists(atPath: workspace.runConfigPath.path))
         #expect(FileManager.default.fileExists(atPath: workspace.schemaPath.path))
 
-        let agentsPath = workspace.path.appendingPathComponent("AGENTS.md").path
-        #expect(FileManager.default.fileExists(atPath: agentsPath))
+        #expect(FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent("AGENTS.md").path))
+        #expect(FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent("CLAUDE.md").path))
+        #expect(FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent(".claude/settings.json").path))
+    }
+
+    @Test
+    func workspaceCopiesOnlyMappedGuidesInOrderAndWritesRunConfig() throws {
+        let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
+        let manager = WorkspaceManager(templates: templates)
+
+        let catalog = GuidesCatalog.default
+        let gptGuide = try #require(catalog.guide(id: GuidesDefaults.gptGuideID))
+        let claudeGuide = try #require(catalog.guide(id: GuidesDefaults.claudeGuideID))
+
+        let request = makeRequest(
+            tool: .codex,
+            targetSlug: "custom-target",
+            targetDisplayName: "Custom Target",
+            mappedGuides: [gptGuide, claudeGuide]
+        )
+
+        let workspace = try manager.createRunWorkspace(request: request)
+        defer { workspace.cleanup() }
+
+        let expected = [
+            "guides/001-builtin-guide-gpt-5-2.md",
+            "guides/002-builtin-guide-claude-4-6.md"
+        ]
+        for relative in expected {
+            #expect(FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent(relative).path))
+        }
+
+        let runConfigData = try Data(contentsOf: workspace.runConfigPath)
+        let runConfig = try JSONDecoder().decode(WorkspaceRunConfigFixture.self, from: runConfigData)
+        #expect(runConfig.targetSlug == "custom-target")
+        #expect(runConfig.guideFilenamesInOrder == expected)
+
+        let guideDirectory = workspace.path.appendingPathComponent("guides")
+        let guideFileNames = try FileManager.default.contentsOfDirectory(atPath: guideDirectory.path)
+        #expect(guideFileNames.count == 2)
+    }
+
+    @Test
+    func workspaceDoesNotCopyUnmappedGuides() throws {
+        let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
+        let manager = WorkspaceManager(templates: templates)
+
+        let catalog = GuidesCatalog.default
+        let gptGuide = try #require(catalog.guide(id: GuidesDefaults.gptGuideID))
+
+        let request = makeRequest(
+            tool: .codex,
+            targetSlug: GuidesDefaults.gptOutputSlug,
+            targetDisplayName: "GPT-5.2",
+            mappedGuides: [gptGuide]
+        )
+
+        let workspace = try manager.createRunWorkspace(request: request)
+        defer { workspace.cleanup() }
+
+        #expect(FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent("guides/001-builtin-guide-gpt-5-2.md").path))
+        #expect(!FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent("guides/002-builtin-guide-claude-4-6.md").path))
+        #expect(!FileManager.default.fileExists(atPath: workspace.path.appendingPathComponent("guides/003-builtin-guide-gemini-3-0.md").path))
     }
 
     @Test
@@ -26,7 +87,7 @@ struct WorkspaceManagerTests {
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
 
-        let request = RunRequest(tool: .codex, targetModel: .gpt52, inputPrompt: "Hello")
+        let request = makeRequest(tool: .codex, mappedGuides: [])
         let workspace = try manager.createRunWorkspace(request: request)
         defer { workspace.cleanup() }
 
@@ -38,9 +99,11 @@ struct WorkspaceManagerTests {
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
 
-        let request = RunRequest(
+        let request = makeRequest(
             tool: .claude,
-            targetModel: .claude46,
+            targetSlug: GuidesDefaults.claudeOutputSlug,
+            targetDisplayName: "Claude 4.6",
+            mappedGuides: GuidesCatalog.default.orderedGuides(forOutputSlug: GuidesDefaults.claudeOutputSlug),
             inputPrompt: "Hello",
             engineModel: "claude-opus-4-6",
             engineEffort: .medium
@@ -62,9 +125,11 @@ struct WorkspaceManagerTests {
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
 
-        let codexRequest = RunRequest(
+        let codexRequest = makeRequest(
             tool: .codex,
-            targetModel: .gpt52,
+            targetSlug: GuidesDefaults.gptOutputSlug,
+            targetDisplayName: "GPT-5.2",
+            mappedGuides: GuidesCatalog.default.orderedGuides(forOutputSlug: GuidesDefaults.gptOutputSlug),
             inputPrompt: "Hello",
             engineModel: "gpt-5",
             engineEffort: .high
@@ -78,9 +143,11 @@ struct WorkspaceManagerTests {
         let codexSettings = try #require(codexObject as? [String: Any])
         #expect(codexSettings["effortLevel"] == nil)
 
-        let claudeRequestWithoutEffort = RunRequest(
+        let claudeRequestWithoutEffort = makeRequest(
             tool: .claude,
-            targetModel: .claude46,
+            targetSlug: GuidesDefaults.claudeOutputSlug,
+            targetDisplayName: "Claude 4.6",
+            mappedGuides: GuidesCatalog.default.orderedGuides(forOutputSlug: GuidesDefaults.claudeOutputSlug),
             inputPrompt: "Hello",
             engineModel: "claude-opus-4-6",
             engineEffort: nil
@@ -94,4 +161,29 @@ struct WorkspaceManagerTests {
         let claudeSettings = try #require(claudeObject as? [String: Any])
         #expect(claudeSettings["effortLevel"] == nil)
     }
+
+    private func makeRequest(
+        tool: Tool,
+        targetSlug: String = GuidesDefaults.gptOutputSlug,
+        targetDisplayName: String = "GPT-5.2",
+        mappedGuides: [GuideDoc],
+        inputPrompt: String = "Hello",
+        engineModel: String? = nil,
+        engineEffort: EngineEffort? = nil
+    ) -> RunRequest {
+        RunRequest(
+            tool: tool,
+            targetSlug: targetSlug,
+            targetDisplayName: targetDisplayName,
+            mappedGuides: mappedGuides,
+            inputPrompt: inputPrompt,
+            engineModel: engineModel,
+            engineEffort: engineEffort
+        )
+    }
+}
+
+private struct WorkspaceRunConfigFixture: Codable {
+    let targetSlug: String
+    let guideFilenamesInOrder: [String]
 }
