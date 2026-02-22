@@ -428,3 +428,59 @@ When behavior changes, update this file in the same change:
   - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
 - Durable caveats:
   - The refactor is intentionally behavior-preserving; keep new Guides-related edits within the `UI/Settings/Guides/` slice to avoid recreating a monolithic view file.
+
+## Maintenance Update (2026-02-22, Main Window Dead-Space Auto Sizing)
+- What changed:
+  - Removed the idle-state `Spacer` from `RootView` composer layout; this was the direct source of synthesized dead vertical space between input and bottom bar in compact mode.
+  - Moved main-window sizing control to SwiftUI scene/content constraints instead of manual `NSWindow` orchestration:
+    - main scene now uses `windowResizability(.contentSize)`,
+    - `RootView` now declares state-bound height limits:
+      - idle (`showOutput == false`): `minHeight 220`, `maxHeight 250`
+      - output/running (`showOutput == true`): `minHeight 320`, `maxHeight 560`
+  - Kept compact launch default size at `520x250` for new windows.
+- Why it changed:
+  - User-reported dead space persisted and prior manual window-control approach added unnecessary complexity. The root cause was layout elasticity in idle mode plus unconstrained scene sizing under restoration.
+- How it was verified:
+  - `swift test` (80 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Compact/expanded behavior is now defined by `RootView` height bounds and scene `contentSize` resizability; if future UX changes alter editor/panel heights, these bounds should be reviewed together.
+  - This fix intentionally avoids direct `NSWindow` frame mutations to reduce maintenance complexity and animation-related regressions.
+
+## Maintenance Update (2026-02-22, Main Screen Vertical Spacing Rebalance)
+- What changed:
+  - Rebalanced `composerArea` vertical padding in `RootView`:
+    - top padding reduced from `16` to `8`,
+    - bottom padding increased from `12` to `20`.
+  - This shifts visual spacing from above the input editor to the area between the editor block and the bottom configuration bar.
+- Why it changed:
+  - User feedback indicated excess empty space from the top edge to the input field and insufficient separation between the input area and bottom controls.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Keep top/bottom composer paddings tuned as a pair; adjusting only one side can reintroduce perceived imbalance in compact mode.
+
+## Maintenance Update (2026-02-22, Output Model Picker Arrow/Cursor UX)
+- What changed:
+  - Updated `BottomBarView` output-model selector (`modelPicker`) interaction styling:
+    - removed explicit chevron icon from the custom label content,
+    - applied `.menuIndicator(.hidden)` to suppress native menu arrow affordance,
+    - added hover pointer behavior (`NSCursor.pointingHand`) while selector is enabled.
+- Why it changed:
+  - User requested cleaner selector presentation (no right-side arrow) and explicit pointer cursor feedback on hover.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Hover cursor uses push/pop semantics; if additional hover states are introduced nearby, keep cursor stack balance in mind.
+
+## Maintenance Update (2026-02-22, Input Placeholder/Caret Alignment)
+- What changed:
+  - Adjusted empty-state placeholder in `InputEditorView` to align with `TextEditor` insertion caret:
+    - replaced generic placeholder vertical inset (`.padding(.vertical, 16)`) with explicit top inset (`.padding(.top, 8)`),
+    - kept leading inset at `13` to preserve horizontal text start alignment.
+- Why it changed:
+  - User-reported UI quality issue: caret and placeholder were visually misaligned in the empty input state.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Placeholder/caret alignment depends on effective `TextEditor` content insets; if editor padding or font metrics change, revisit both placeholder top and leading insets together.

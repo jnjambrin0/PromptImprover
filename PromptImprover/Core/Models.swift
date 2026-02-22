@@ -13,6 +13,13 @@ enum Tool: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    var shortDisplayName: String {
+        switch self {
+        case .codex: return "Codex"
+        case .claude: return "Claude"
+        }
+    }
+
     var missingInstallMessage: String {
         switch self {
         case .codex:

@@ -12,6 +12,8 @@ struct GuidesSettingsView: View {
     @State var addSlug: String = ""
     @State var editDisplayName: String = ""
     @State var editSlug: String = ""
+    @State var showAddOutputPopover: Bool = false
+    @State var showEditOutputPopover: Bool = false
 
     @State var selectedUnassignedGuideID: String?
     @State var isImportingGuide: Bool = false
@@ -34,7 +36,7 @@ struct GuidesSettingsView: View {
     var body: some View {
         HSplitView {
             outputModelsPane
-                .frame(minWidth: 250, idealWidth: 280, maxWidth: 340)
+                .frame(minWidth: 180, idealWidth: 210, maxWidth: 280)
 
             rightWorkspacePane
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -7,6 +7,8 @@ struct ModelsSettingsView: View {
     @State private var selectedModel: String?
     @State private var newModelName: String = ""
     @State private var renameModelName: String = ""
+    @State private var showAddModelPopover: Bool = false
+    @State private var showRenameModelPopover: Bool = false
 
     private static let capabilityTimestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -90,29 +92,38 @@ struct ModelsSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Picker("Tool", selection: $selectedTool) {
-                    ForEach(Tool.allCases) { tool in
-                        Text(tool.displayName).tag(tool)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Spacer()
-
-                Button("Reset to defaults") {
-                    viewModel.resetToolSettingsToDefaults(selectedTool)
-                    syncSelectedModelWithCurrentList()
+            Picker("Tool", selection: $selectedTool) {
+                ForEach(Tool.allCases) { tool in
+                    Text(tool.displayName).tag(tool)
                 }
             }
+            .pickerStyle(.segmented)
 
             modelListEditor
 
             Form {
                 defaultModelPicker
-                defaultEffortPicker
-                allowlistEditor
-                capabilityStatus
+
+                DisclosureGroup("Effort Configuration") {
+                    defaultEffortPicker
+                    allowlistEditor
+                }
+
+                DisclosureGroup {
+                    capabilityStatusDetails
+                } label: {
+                    capabilityStatusSummary
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Reset to Defaults") {
+                    viewModel.resetToolSettingsToDefaults(selectedTool)
+                    syncSelectedModelWithCurrentList()
+                }
+                .controlSize(.small)
+                .buttonStyle(.borderless)
             }
         }
         .onAppear {
@@ -131,41 +142,112 @@ struct ModelsSettingsView: View {
 
     private var modelListEditor: some View {
         GroupBox("Engine Models") {
-            HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 List(models, id: \.self, selection: $selectedModel) { model in
                     Text(model)
                         .font(.system(size: 12, design: .monospaced))
                         .lineLimit(1)
+                        .contextMenu {
+                            Button("Rename...") {
+                                renameModelName = model
+                                selectedModel = model
+                                showRenameModelPopover = true
+                            }
+                            Divider()
+                            Button("Move Up") {
+                                selectedModel = model
+                                DispatchQueue.main.async { moveSelectedModelUp() }
+                            }
+                            .disabled(models.firstIndex(of: model) == 0)
+                            Button("Move Down") {
+                                selectedModel = model
+                                DispatchQueue.main.async { moveSelectedModelDown() }
+                            }
+                            .disabled(models.firstIndex(of: model) == models.count - 1)
+                            Divider()
+                            Button("Delete", role: .destructive) {
+                                selectedModel = model
+                                DispatchQueue.main.async { deleteSelectedModel() }
+                            }
+                        }
                 }
-                .frame(minWidth: 320, minHeight: 200)
+                .frame(minHeight: 200)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        TextField("Add model identifier", text: $newModelName)
-                            .textFieldStyle(.roundedBorder)
-                        Button("Add", action: addModel)
-                            .disabled(!canAddModel)
+                HStack(spacing: 4) {
+                    Button(action: { showAddModelPopover = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .popover(isPresented: $showAddModelPopover) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Add Engine Model")
+                                .font(.headline)
+                            TextField("Model identifier", text: $newModelName)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 240)
+                                .onSubmit {
+                                    if canAddModel {
+                                        addModel()
+                                        showAddModelPopover = false
+                                    }
+                                }
+                            HStack {
+                                Spacer()
+                                Button("Cancel") {
+                                    newModelName = ""
+                                    showAddModelPopover = false
+                                }
+                                .keyboardShortcut(.cancelAction)
+                                Button("Add") {
+                                    addModel()
+                                    showAddModelPopover = false
+                                }
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(!canAddModel)
+                            }
+                        }
+                        .padding(12)
                     }
 
-                    HStack(spacing: 8) {
-                        TextField("Rename selected model", text: $renameModelName)
-                            .textFieldStyle(.roundedBorder)
-                        Button("Rename", action: renameSelectedModel)
-                            .disabled(!canRenameModel)
+                    Button(action: deleteSelectedModel) {
+                        Image(systemName: "minus")
                     }
+                    .disabled(!canDeleteModel)
 
-                    HStack(spacing: 8) {
-                        Button("Move Up", action: moveSelectedModelUp)
-                            .disabled(!canMoveSelectedModelUp)
-                        Button("Move Down", action: moveSelectedModelDown)
-                            .disabled(!canMoveSelectedModelDown)
-                        Button("Delete", role: .destructive, action: deleteSelectedModel)
-                            .disabled(!canDeleteModel)
-                    }
+                    Spacer()
 
                     Text("Ordered list applies to new runs only.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+                .popover(isPresented: $showRenameModelPopover) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Rename Model")
+                            .font(.headline)
+                        TextField("New name", text: $renameModelName)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(minWidth: 240)
+                            .onSubmit {
+                                if canRenameModel {
+                                    renameSelectedModel()
+                                    showRenameModelPopover = false
+                                }
+                            }
+                        HStack {
+                            Spacer()
+                            Button("Cancel") {
+                                renameModelName = selectedModel ?? ""
+                                showRenameModelPopover = false
+                            }
+                            .keyboardShortcut(.cancelAction)
+                            Button("Rename") {
+                                renameSelectedModel()
+                                showRenameModelPopover = false
+                            }
+                            .keyboardShortcut(.defaultAction)
+                            .disabled(!canRenameModel)
+                        }
+                    }
+                    .padding(12)
                 }
             }
             .padding(.top, 4)
@@ -261,26 +343,41 @@ struct ModelsSettingsView: View {
         }
     }
 
-    private var capabilityStatus: some View {
-        let statusText: String
+    private var capabilityStatusText: String {
         if viewModel.isRecheckingCapabilities(for: selectedTool) {
-            statusText = "Rechecking..."
+            return "Rechecking..."
         } else if selectedAvailability == nil {
-            statusText = "Checking..."
+            return "Checking..."
         } else if selectedAvailability?.installed == false {
-            statusText = "Not installed"
+            return "Not installed"
         } else if selectedAvailability?.healthMessage != nil {
-            statusText = "Error"
+            return "Error"
         } else {
-            statusText = "Ready"
+            return "Ready"
         }
+    }
 
-        return Section {
-            LabeledContent("Status") {
-                Text(statusText)
-                    .foregroundStyle(.secondary)
-            }
+    private var capabilityStatusColor: Color {
+        if viewModel.isRecheckingCapabilities(for: selectedTool) || selectedAvailability == nil {
+            return .orange
+        } else if selectedAvailability?.installed == false || selectedAvailability?.healthMessage != nil {
+            return .red
+        } else {
+            return .green
+        }
+    }
 
+    private var capabilityStatusSummary: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(capabilityStatusColor)
+                .frame(width: 8, height: 8)
+            Text("Capability Status — \(capabilityStatusText)")
+        }
+    }
+
+    private var capabilityStatusDetails: some View {
+        Group {
             LabeledContent("Binary path") {
                 Text(selectedAvailability?.executableURL?.path ?? "Not found")
                     .textSelection(.enabled)
@@ -311,8 +408,6 @@ struct ModelsSettingsView: View {
                 viewModel.recheckCapabilities(for: selectedTool)
             }
             .disabled(selectedAvailability?.installed != true || viewModel.isRecheckingCapabilities(for: selectedTool))
-        } header: {
-            Text("Capability status")
         }
     }
 

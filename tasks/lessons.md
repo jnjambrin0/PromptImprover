@@ -36,3 +36,10 @@ Capture user corrections and prevention rules.
 - Mistake pattern: Set child split minimum widths (`library + editor`) that could exceed parent workspace constraints, causing right-edge content clipping under some splitter positions/window widths.
 - Prevention rule: In split-based layouts, enforce `sum(child mins) <= practical parent min` and avoid rigid parent min-width constraints that can conflict with child minima.
 - Verification: Rebalanced pane minima/maxima in `GuidesSettingsView`, removed rigid right-workspace minimum width, and validated with `swift test` and `xcodebuild`.
+
+## 2026-02-22 (Main Window Dead-Space Follow-up)
+- Date: 2026-02-22
+- Context: User rejected an initial main-window dead-space fix that introduced manual `NSWindow` sizing orchestration.
+- Mistake pattern: Jumped to imperative window-frame control before proving the layout root cause, increasing complexity without first exhausting SwiftUI-native constraint fixes.
+- Prevention rule: For UI spacing regressions, first isolate whether the issue is layout elasticity (`Spacer`, min/max frames) or scene sizing/restoration behavior, and prefer declarative SwiftUI scene/content constraints before AppKit window mutation.
+- Verification: Replaced manual window controller with `windowResizability(.contentSize)`, state-bounded root heights, and removal of idle spacer; reran `swift test` and `xcodebuild` successfully.

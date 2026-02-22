@@ -8,6 +8,9 @@ struct PromptImproverApp: App {
         WindowGroup {
             RootView(viewModel: viewModel)
         }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultSize(width: 520, height: 250)
 
         Settings {
             SettingsRootView(viewModel: viewModel)

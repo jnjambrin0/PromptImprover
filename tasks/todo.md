@@ -193,3 +193,61 @@ Use this file to track the current task with checkable items.
   - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
 - Risks/Follow-ups:
   - Manual UI smoke remains recommended to validate no interaction regressions across all Guides transitions after structural refactor.
+
+## Main Window Dead-Space Fix Checklist
+- [x] Remove idle-state spacer in main composer so collapsed mode no longer synthesizes vertical dead space
+- [x] Switch main scene to `windowResizability(.contentSize)` so window geometry tracks content constraints
+- [x] Introduce explicit state-based root height bounds (`idle: 220...250`, `output/running: 320...560`)
+- [x] Keep scene default size at compact launch geometry (`520x250`)
+- [x] Re-run full unit test suite
+- [x] Re-run macOS app build
+- [ ] Manual in-app smoke for restore/compact/expand/resize scenarios
+
+## Review (Main Window Dead-Space Fix)
+- Result: Replaced manual `NSWindow` orchestration with a SwiftUI-native fix. The dead-space source in idle mode was the flexible `Spacer`; removing it and constraining scene/window size from content now keeps launch state compact while still allowing a larger bounded height when output is shown.
+- Verification:
+  - `swift test` (80 tests passed)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI smoke remains required to validate restore behavior and bounded resize ergonomics in an interactive app session.
+
+## Main Screen Vertical Spacing Tuning Checklist
+- [x] Reduce top inset above the input composer area
+- [x] Move that vertical breathing room below the composer area (toward bottom configuration bar)
+- [x] Keep input size and control layout unchanged
+- [x] Rebuild macOS app target
+- [ ] Manual visual smoke in compact and expanded main-window states
+
+## Review (Main Screen Vertical Spacing Tuning)
+- Result: Rebalanced top/bottom padding around `composerArea` in `RootView` so there is less dead space above the input and more separation between the input block and the bottom configuration bar.
+- Verification:
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual visual check is still needed to confirm exact perceived spacing in the running app across display scales.
+
+## Output Model Picker UX Tuning Checklist
+- [x] Remove explicit right-side chevron icon from output-model selector label
+- [x] Hide native menu indicator arrow on macOS output-model selector
+- [x] Add pointer cursor hover behavior to output-model selector when enabled
+- [x] Rebuild macOS app target
+- [ ] Manual visual smoke of selector hover/appearance in running app
+
+## Review (Output Model Picker UX Tuning)
+- Result: Output-model selector now renders as plain text pill without right-side arrow and shows pointer cursor on hover, matching the interaction style of nearby controls.
+- Verification:
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI check is still recommended to confirm there is no platform-specific fallback indicator in the live environment.
+
+## Input Caret Placeholder Alignment Checklist
+- [x] Align placeholder top inset with `TextEditor` effective insertion line
+- [x] Keep horizontal placeholder gutter consistent with existing text-start offset
+- [x] Rebuild macOS app target
+- [ ] Manual visual smoke of empty input state in running app
+
+## Review (Input Caret Placeholder Alignment)
+- Result: Placeholder vertical offset was reduced to match the insertion caret start line, removing the visual mismatch between the caret position and placeholder baseline in the empty input field.
+- Verification:
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - A final visual pass is recommended across display scales to confirm perceived alignment is exact.
