@@ -326,3 +326,87 @@ When behavior changes, update this file in the same change:
   - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
 - Durable caveats:
   - Pane minimum heights (`260` for mapping, `220` for library) are intentional guardrails for control usability; adjust together if the pane contents change materially.
+
+## Maintenance Update (2026-02-22, Task 3B In-App Guide Editor + Built-In Forking)
+- What changed:
+  - Extended guides model/storage with built-in fork support:
+    - `GuideDoc` now includes optional `forkStoragePath`.
+    - `GuideDocumentManaging` now supports `loadText`, `ensureEditableGuide`, `saveText`, `revertBuiltInFork`, and `hasFork`.
+  - Updated `GuideDocumentManager` behavior:
+    - guide file writes now use `AtomicJSONStore.write(...)` (temp + replace) for atomic persistence.
+    - built-in guides now resolve content from fork file when `forkStoragePath` exists and the file is present, otherwise from bundled template.
+    - built-in `Edit` now creates deterministic local forks under `guides/forks/<guide-id>.md`.
+    - save updates `updatedAt` and SHA-256 `hash`; revert removes fork file and clears `forkStoragePath`.
+  - Added guide editor APIs in `PromptImproverViewModel`:
+    - `loadGuideText(id:)`
+    - `beginGuideEdit(id:)`
+    - `saveGuideText(id:text:)`
+    - `revertGuideToBuiltIn(id:)`
+    - `guideHasFork(id:)`
+    - save/revert use synchronous catalog persistence to reduce metadata-loss risk.
+  - Implemented Settings → Guides markdown editor UX:
+    - selecting a guide opens editor content in a monospaced `TextEditor`.
+    - built-in guides are read-only until `Edit` forks locally.
+    - actions: `Save`, `Discard`, `Revert to built-in` (when fork exists), and explicit `Close Editor`.
+    - dirty-state confirmation added for guide switch and close-editor transitions.
+  - Added tests for Task 3B scenarios:
+    - `GuideDocumentManagerTests`: fork creation, save metadata updates, revert behavior, fork resolution precedence, atomic-save temp cleanup.
+    - `WorkspaceManagerTests`: mapped built-in guide copies fork content when fork exists.
+    - `GuidesCatalogStoreTests`: `forkStoragePath` round-trip and backward-compatible decode when absent.
+- Why it changed:
+  - Implement Task 3B requirements for in-app guide editing while preserving bundle immutability for built-in guides and maintaining reliable, file-based runtime guide handoff.
+- How it was verified:
+  - `swift test` (80 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Unsaved-change confirmation is scoped to guide switch and explicit editor close, not Settings-window close interception.
+  - Runtime prompt contract remains unchanged: guide content is still consumed from workspace files (`RUN_CONFIG.json` + copied `guides/*`), never inlined into provider prompt text.
+
+## Maintenance Update (2026-02-22, Task 3B Guides Height Regression Stabilization)
+- What changed:
+  - Refined `Settings → Guides` right-column layout to prevent vertical clipping after adding the in-app editor:
+    - kept top-level right side as `VSplitView` with `mappingPane` min height `260` and `guideLibraryPane` min height `220`.
+    - changed `guideLibraryPane` from one stacked `VStack` into a nested `VSplitView` with two resizable panes:
+      - library list/actions pane
+      - editor pane
+    - reduced editor `TextEditor` minimum height from `170` to `120` and kept list sizing flexible (`minHeight: 120`, `maxHeight: .infinity`).
+- Why it changed:
+  - User-reported regression: right-side content could exceed available window height, clipping library/editor content and hiding controls.
+- How it was verified:
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - The nested split is intentional to preserve access to both list and editor in short windows; avoid returning to a single fixed vertical stack for these sections.
+
+## Maintenance Update (2026-02-22, Task 3B UX Comfort Redesign)
+- What changed:
+  - Reoriented `Settings → Guides` around an editor-first workflow with explicit workspace modes:
+    - right workspace now uses a persisted segmented mode (`Guides` / `Mapping`) and defaults to `Guides`.
+    - `Guides` mode uses a horizontal split between `Guide Library` and `Guide Editor` to prioritize markdown editing space.
+    - `Mapping` mode is isolated from editing and includes `Open in Editor` handoff.
+  - Preserved and extended unsaved-change guardrails:
+    - existing discard/keep dialog now also gates `Guides -> Mapping` workspace switches when editor content is dirty.
+  - Improved practical editing ergonomics:
+    - raised global Settings minimum size to `1100x700` in `SettingsRootView`.
+    - rebalanced split width constraints to keep a comfortably sized editor pane and avoid output-model controls starving editor width.
+- Why it changed:
+  - User-reported UX issue after height stabilization: content was no longer clipped, but working areas remained too compressed for continuous markdown editing.
+- How it was verified:
+  - `swift test` (80 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - The dominant workflow is intentionally editor-first; mapping is now a dedicated mode instead of a simultaneous stacked pane.
+  - Workspace mode persistence uses `@AppStorage("settings.guides.workspace.mode")`; if mode taxonomy changes later, include migration handling.
+
+## Maintenance Update (2026-02-22, Task 3B Horizontal Overflow Tuning)
+- What changed:
+  - Rebalanced horizontal width constraints in `GuidesSettingsView` to prevent editor content from clipping when split panes approach minimum sizes:
+    - narrowed output-models pane bounds (`min: 250`, `ideal: 280`, `max: 340`).
+    - removed rigid `minWidth` from right workspace container so child split can adapt without forcing overflow.
+    - reduced editor-workspace split minimums (`library min: 250`, `editor min: 400`) and tightened library max width (`360`).
+- Why it changed:
+  - User-reported regression after comfort redesign: editor area could extend past visible bounds horizontally, clipping right-side controls/content.
+- How it was verified:
+  - `swift test` (80 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - Keep split-pane minimums internally consistent; avoid parent min-width constraints that are smaller than child aggregate minimums.

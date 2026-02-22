@@ -36,6 +36,7 @@ struct GuideDoc: Identifiable, Codable, Equatable, Hashable {
     var id: String
     var title: String
     var storagePath: String
+    var forkStoragePath: String?
     var isBuiltIn: Bool
     var updatedAt: Date
     var hash: String?
@@ -44,6 +45,7 @@ struct GuideDoc: Identifiable, Codable, Equatable, Hashable {
         id: String,
         title: String,
         storagePath: String,
+        forkStoragePath: String? = nil,
         isBuiltIn: Bool,
         updatedAt: Date,
         hash: String? = nil
@@ -51,6 +53,7 @@ struct GuideDoc: Identifiable, Codable, Equatable, Hashable {
         self.id = GuideDoc.normalizeIdentifier(id) ?? id
         self.title = GuideDoc.normalizeTitle(title) ?? title
         self.storagePath = GuideDoc.normalizeStoragePath(storagePath) ?? storagePath
+        self.forkStoragePath = GuideDoc.normalizeStoragePath(forkStoragePath)
         self.isBuiltIn = isBuiltIn
         self.updatedAt = updatedAt
         self.hash = hash?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -347,6 +350,7 @@ struct GuidesCatalog: Codable, Equatable {
                     id: normalizedID,
                     title: normalizedTitle,
                     storagePath: normalizedPath,
+                    forkStoragePath: GuideDoc.normalizeStoragePath(guide.forkStoragePath),
                     isBuiltIn: guide.isBuiltIn,
                     updatedAt: guide.updatedAt,
                     hash: guide.hash

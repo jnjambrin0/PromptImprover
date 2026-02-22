@@ -105,3 +105,75 @@ Use this file to track the current task with checkable items.
 - Risks/Follow-ups:
   - Manual UI smoke is still recommended for file importer UX and confirmation dialogs in Settings → Guides.
   - In-app guide content editing remains intentionally out of scope; Task 3A covers import/mapping/persistence/runtime integration only.
+
+## Task 3B Checklist
+- [x] Extend `GuideDoc` with optional `forkStoragePath` and preserve backward-compatible decoding
+- [x] Extend `GuideDocumentManaging` with editor lifecycle APIs (`loadText`, `ensureEditableGuide`, `saveText`, `revertBuiltInFork`, `hasFork`)
+- [x] Switch guide file writes to atomic temp+replace logic via `AtomicJSONStore`
+- [x] Add built-in fork resolution precedence (fork if present, template otherwise) without changing guide IDs
+- [x] Add `PromptImproverViewModel` guide editor methods and synchronous catalog persistence for save/revert
+- [x] Add Settings → Guides in-app markdown editor UI with monospaced `TextEditor`
+- [x] Implement built-in read-only mode + `Edit` (fork-on-edit) + `Save` + `Discard` + `Revert to built-in`
+- [x] Implement dirty-state confirmation on guide switch and explicit editor close
+- [x] Verify run integration still file-based and fork content flows into workspace via existing mapped-guide copy path
+- [x] Add tests for fork creation/save/revert/resolution, atomic save cleanup, catalog fork-path persistence, and workspace fork-preference
+- [x] Re-run full unit suite and macOS app build
+- [ ] Manual in-app smoke of new guide editor interactions in Settings window
+
+## Review (Task 3B)
+- Result: Implemented in-app markdown guide editing with safe built-in forking and revert flow. Built-in guides remain bundle read-only until `Edit` creates a user-local fork; saves are atomic and update metadata (`updatedAt`, `hash`), and runtime workspace guide copying now automatically uses forked content when present.
+- Verification:
+  - `swift test` (80 tests passed; includes expanded `GuideDocumentManagerTests`, `GuidesCatalogStoreTests`, and `WorkspaceManagerTests` coverage for Task 3B behavior)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI smoke remains recommended for editor flow details in Settings (dirty-state dialogs, fork/revert UX transitions).
+  - Dirty-state confirmation is intentionally scoped to guide switch and explicit editor close, not Settings-window close interception.
+
+## Task 3B Layout Stabilization Checklist
+- [x] Diagnose Guides tab overflow after editor integration
+- [x] Lower right-pane minimum height guardrail to avoid aggregate overflow
+- [x] Split Guide Library pane into nested vertical resizable panes (library list/actions + editor)
+- [x] Reduce editor minimum text area height while keeping monospaced editor behavior
+- [x] Rebuild macOS app target to confirm no SwiftUI regressions
+- [ ] Manual visual smoke in short/tall Settings windows
+
+## Review (Task 3B Layout Stabilization)
+- Result: Stabilized Guides tab vertical layout by replacing the single stacked Guide Library content block with a nested `VSplitView`, and by rebalancing minimum heights (`mappingPane: 260`, `guideLibraryPane: 220`) so the right column no longer over-constrains short windows.
+- Verification:
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI smoke is still recommended to validate usability across different Settings window sizes and splitter positions.
+
+## Task 3B UX Comfort Redesign Checklist
+- [x] Keep root `Guides` tab architecture as `HSplitView` (left output models, right workspace with segmented mode)
+- [x] Keep editor-first workspace mode (`Guides`) with persisted mode via `@AppStorage`
+- [x] Keep dedicated mapping workspace (`Mapping`) with `Open in Editor` handoff action
+- [x] Keep editor workspace as horizontal library/editor split with searchable guide library and monospaced markdown editor
+- [x] Extend dirty-state guard coverage to workspace switching using existing discard/keep dialog flow
+- [x] Increase global Settings minimum window size for practical markdown editing ergonomics
+- [x] Update maintenance documentation (`AGENTS.md`) and lessons (`tasks/lessons.md`)
+- [x] Re-run full unit suite and macOS app build
+- [ ] Manual in-app UX smoke across resizing and editor/mapping transitions
+
+## Review (Task 3B UX Comfort Redesign)
+- Result: Completed. Guides settings now prioritizes real markdown editing space by separating workflows into explicit `Guides` and `Mapping` modes, preserving dirty-state protections, and enforcing a larger minimum Settings window footprint so editor + library panes stay usable.
+- Verification:
+  - `swift test` (80 tests passed)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual Settings-window UX smoke remains required to validate real-world comfort across resize ranges.
+
+## Task 3B Horizontal Overflow Tuning Checklist
+- [x] Diagnose horizontal clipping in `Guides` editor workspace after comfort redesign
+- [x] Rebalance split width constraints (`outputModels`, library/editor split mins/maxes)
+- [x] Remove conflicting rigid right-workspace minimum width constraint
+- [x] Re-run full unit suite and macOS app build
+- [ ] Manual in-app smoke focused on horizontal resizing/splitter extremes
+
+## Review (Task 3B Horizontal Overflow Tuning)
+- Result: Completed. Editor workspace no longer forces horizontal overflow under tight split/window combinations because split minima were reduced and conflicting parent minimum width was removed.
+- Verification:
+  - `swift test` (80 tests passed)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual resize smoke is still recommended for edge-case splitter positions in Settings.

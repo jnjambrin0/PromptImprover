@@ -414,6 +414,76 @@ final class PromptImproverViewModel: ObservableObject {
         }
     }
 
+    func loadGuideText(id: String) throws -> String {
+        guard let existing = guidesCatalog.guide(id: id) else {
+            throw PromptImproverError.guideManagementFailed("Guide not found.")
+        }
+
+        do {
+            return try guideDocumentManager.loadText(for: existing)
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func beginGuideEdit(id: String) throws -> GuideDoc {
+        guard let existing = guidesCatalog.guide(id: id) else {
+            throw PromptImproverError.guideManagementFailed("Guide not found.")
+        }
+
+        do {
+            let editable = try guideDocumentManager.ensureEditableGuide(existing)
+            var updated = guidesCatalog
+            updated.upsertGuide(editable)
+            applyGuidesCatalog(updated)
+            return editable
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func saveGuideText(id: String, text: String) throws -> GuideDoc {
+        guard let existing = guidesCatalog.guide(id: id) else {
+            throw PromptImproverError.guideManagementFailed("Guide not found.")
+        }
+
+        do {
+            let saved = try guideDocumentManager.saveText(text, for: existing)
+            var updated = guidesCatalog
+            updated.upsertGuide(saved)
+            try applyGuidesCatalogSynchronously(updated)
+            return saved
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    @discardableResult
+    func revertGuideToBuiltIn(id: String) throws -> GuideDoc {
+        guard let existing = guidesCatalog.guide(id: id) else {
+            throw PromptImproverError.guideManagementFailed("Guide not found.")
+        }
+
+        do {
+            let reverted = try guideDocumentManager.revertBuiltInFork(for: existing)
+            var updated = guidesCatalog
+            updated.upsertGuide(reverted)
+            try applyGuidesCatalogSynchronously(updated)
+            return reverted
+        } catch {
+            throw mapGuidesError(error)
+        }
+    }
+
+    func guideHasFork(id: String) -> Bool {
+        guard let existing = guidesCatalog.guide(id: id), existing.isBuiltIn else {
+            return false
+        }
+        return guideDocumentManager.hasFork(for: existing)
+    }
+
     func resetBuiltInOutputModelsAndMappings() {
         var updated = guidesCatalog
         updated.resetBuiltInsPreservingUserEntries()
@@ -445,6 +515,13 @@ final class PromptImproverViewModel: ObservableObject {
         guidesCatalog = reconciled
         selectedTargetSlug = resolvedTargetSelection(in: reconciled, preferredSelectedSlug: preferredSelectedSlug)
         persistGuidesCatalog(reconciled)
+    }
+
+    private func applyGuidesCatalogSynchronously(_ updated: GuidesCatalog, preferredSelectedSlug: String? = nil) throws {
+        let reconciled = updated.reconciled()
+        try guidesCatalogStore.save(reconciled)
+        guidesCatalog = reconciled
+        selectedTargetSlug = resolvedTargetSelection(in: reconciled, preferredSelectedSlug: preferredSelectedSlug)
     }
 
     private func persistGuidesCatalog(_ catalog: GuidesCatalog) {

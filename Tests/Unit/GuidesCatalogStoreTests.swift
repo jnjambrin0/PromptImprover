@@ -8,7 +8,7 @@ struct GuidesCatalogStoreTests {
         let fileURL = makeCatalogFileURL()
         let store = GuidesCatalogStore(fileURL: fileURL)
 
-        let guide = GuideDoc(
+        var guide = GuideDoc(
             id: "guide-user-1",
             title: "User One",
             storagePath: "guides/guide-user-1.md",
@@ -16,6 +16,7 @@ struct GuidesCatalogStoreTests {
             updatedAt: Date(timeIntervalSince1970: 2_000),
             hash: "abc123"
         )
+        guide.forkStoragePath = "guides/forks/guide-user-1.md"
 
         var catalog = GuidesCatalog.default
         catalog.upsertGuide(guide)
@@ -26,6 +27,7 @@ struct GuidesCatalogStoreTests {
         let loaded = store.load()
 
         #expect(loaded == catalog.reconciled())
+        #expect(loaded.guide(id: "guide-user-1")?.forkStoragePath == "guides/forks/guide-user-1.md")
     }
 
     @Test
@@ -62,7 +64,8 @@ struct GuidesCatalogStoreTests {
         let loaded = store.load()
 
         #expect(loaded.outputModel(slug: "custom-model") != nil)
-        #expect(loaded.guide(id: "guide-user-1") != nil)
+        let guide = try #require(loaded.guide(id: "guide-user-1"))
+        #expect(guide.forkStoragePath == nil)
     }
 
     @Test
@@ -111,6 +114,38 @@ struct GuidesCatalogStoreTests {
         #expect(loaded.outputModels.map(\.slug) == ["model-b", "model-a"])
         #expect(loaded.outputModel(slug: "model-a")?.guideIds == ["guide-b", "guide-a"])
         #expect(loaded.guides.map(\.id) == ["guide-a", "guide-b"])
+    }
+
+    @Test
+    func decodesMissingForkStoragePathAsNilForBackwardCompatibility() throws {
+        let fileURL = makeCatalogFileURL()
+        let json = """
+        {
+          "schemaVersion": 1,
+          "outputModels": [
+            {
+              "displayName": "GPT-5.2",
+              "slug": "gpt-5-2",
+              "guideIds": ["builtin-guide-gpt-5-2"]
+            }
+          ],
+          "guides": [
+            {
+              "id": "builtin-guide-gpt-5-2",
+              "title": "GPT-5.2 Prompt Guide",
+              "storagePath": "GPT5.2_PROMPT_GUIDE.md",
+              "isBuiltIn": true,
+              "updatedAt": 1737590400
+            }
+          ]
+        }
+        """
+        try Data(json.utf8).write(to: fileURL, options: .atomic)
+
+        let store = GuidesCatalogStore(fileURL: fileURL)
+        let loaded = store.load()
+        let guide = try #require(loaded.guide(id: "builtin-guide-gpt-5-2"))
+        #expect(guide.forkStoragePath == nil)
     }
 
     private func makeCatalogFileURL() -> URL {

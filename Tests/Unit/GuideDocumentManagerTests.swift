@@ -99,6 +99,81 @@ struct GuideDocumentManagerTests {
         #expect(text.contains("GPT-5.2"))
     }
 
+    @Test
+    func ensureEditableGuideCreatesForkForBuiltInGuide() throws {
+        let context = try makeContext()
+        let manager = context.makeManager(maxImportSizeBytes: 1_048_576)
+        let builtInGuide = try #require(GuidesCatalog.default.guide(id: GuidesDefaults.gptGuideID))
+
+        let editable = try manager.ensureEditableGuide(builtInGuide)
+        let forkPath = try #require(editable.forkStoragePath)
+        #expect(editable.isBuiltIn)
+        #expect(forkPath.hasPrefix("guides/forks/"))
+        #expect(manager.hasFork(for: editable))
+
+        let forkURL = context.appSupportDirectory.appendingPathComponent(forkPath)
+        #expect(FileManager.default.fileExists(atPath: forkURL.path))
+    }
+
+    @Test
+    func builtInGuidePrefersForkAndRevertReturnsToTemplateContent() throws {
+        let context = try makeContext()
+        let manager = context.makeManager(maxImportSizeBytes: 1_048_576)
+        let builtInGuide = try #require(GuidesCatalog.default.guide(id: GuidesDefaults.gptGuideID))
+        let templateText = try manager.loadText(for: builtInGuide)
+
+        let editable = try manager.ensureEditableGuide(builtInGuide)
+        let customBody = "# Custom Forked Guide\n\nOnly this should be used.\n"
+        let saved = try manager.saveText(customBody, for: editable)
+
+        let savedText = try manager.loadText(for: saved)
+        #expect(savedText == customBody)
+        #expect(saved.hash != nil)
+        #expect(saved.updatedAt.timeIntervalSince1970 > builtInGuide.updatedAt.timeIntervalSince1970)
+
+        let reverted = try manager.revertBuiltInFork(for: saved)
+        #expect(reverted.forkStoragePath == nil)
+        #expect(reverted.hash == nil)
+        #expect(!manager.hasFork(for: reverted))
+
+        let revertedText = try manager.loadText(for: reverted)
+        #expect(revertedText == templateText)
+    }
+
+    @Test
+    func saveTextIsAtomicAndCleansTemporaryFiles() throws {
+        let context = try makeContext()
+        let manager = context.makeManager(maxImportSizeBytes: 1_048_576)
+        let builtInGuide = try #require(GuidesCatalog.default.guide(id: GuidesDefaults.gptGuideID))
+        let editable = try manager.ensureEditableGuide(builtInGuide)
+
+        let saved = try manager.saveText("# Atomic Save\n\nCheck temp files.\n", for: editable)
+        let forkStoragePath = try #require(saved.forkStoragePath)
+        let forkFileName = URL(fileURLWithPath: forkStoragePath).lastPathComponent
+        let tempPrefix = ".\(forkFileName).tmp-"
+
+        let forkDirectory = context.appSupportDirectory.appendingPathComponent("guides/forks", isDirectory: true)
+        let directoryEntries = try FileManager.default.contentsOfDirectory(atPath: forkDirectory.path)
+        #expect(directoryEntries.contains(where: { $0.hasPrefix(tempPrefix) }) == false)
+    }
+
+    @Test
+    func saveTextUpdatesUserGuideInPlace() throws {
+        let context = try makeContext()
+        let manager = context.makeManager(maxImportSizeBytes: 1_048_576)
+
+        let sourceURL = context.sourcesDirectory.appendingPathComponent("user-guide.md")
+        try Data("# Original\n".utf8).write(to: sourceURL, options: .atomic)
+        let imported = try manager.importGuide(from: sourceURL)
+
+        let updatedBody = "# Updated\n\nPersisted text.\n"
+        let saved = try manager.saveText(updatedBody, for: imported)
+
+        #expect(saved.isBuiltIn == false)
+        #expect(saved.hash != nil)
+        #expect(try manager.loadText(for: saved) == updatedBody)
+    }
+
     private func makeContext() throws -> GuideManagerTestContext {
         let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
             .appendingPathComponent("PromptImproverGuideManagerTests-\(UUID().uuidString)", isDirectory: true)

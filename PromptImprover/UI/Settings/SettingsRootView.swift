@@ -16,7 +16,7 @@ struct SettingsRootView: View {
                 }
         }
         .padding(16)
-        .frame(minWidth: 860, minHeight: 560)
+        .frame(minWidth: 1100, minHeight: 700)
     }
 }
 

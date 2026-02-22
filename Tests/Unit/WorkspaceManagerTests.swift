@@ -95,6 +95,45 @@ struct WorkspaceManagerTests {
     }
 
     @Test
+    func workspaceUsesForkedBuiltInGuideContentWhenForkExists() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("PromptImproverWorkspaceForkTests-\(UUID().uuidString)", isDirectory: true)
+        let appSupportDirectory = root.appendingPathComponent("AppSupport", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try FileManager.default.createDirectory(at: appSupportDirectory, withIntermediateDirectories: true)
+
+        let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
+        let guideManager = GuideDocumentManager(
+            templates: templates,
+            appSupportDirectory: appSupportDirectory
+        )
+        let manager = WorkspaceManager(
+            templates: templates,
+            guideDocumentManager: guideManager
+        )
+
+        let builtInGuide = try #require(GuidesCatalog.default.guide(id: GuidesDefaults.gptGuideID))
+        let editable = try guideManager.ensureEditableGuide(builtInGuide)
+        let customBody = "# Forked GPT Guide\n\nUse fork content.\n"
+        let forkedGuide = try guideManager.saveText(customBody, for: editable)
+
+        let request = makeRequest(
+            tool: .codex,
+            targetSlug: GuidesDefaults.gptOutputSlug,
+            targetDisplayName: "GPT-5.2",
+            mappedGuides: [forkedGuide]
+        )
+
+        let workspace = try manager.createRunWorkspace(request: request)
+        defer { workspace.cleanup() }
+
+        let copiedGuidePath = workspace.path.appendingPathComponent("guides/001-builtin-guide-gpt-5-2.md")
+        let copiedText = try String(contentsOf: copiedGuidePath, encoding: .utf8)
+        #expect(copiedText == customBody)
+    }
+
+    @Test
     func claudeWorkspaceWritesEffortLevelWhenConfigured() throws {
         let templates = Templates(bundle: .main, fallbackRoot: templateRootURL())
         let manager = WorkspaceManager(templates: templates)
