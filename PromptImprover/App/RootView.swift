@@ -11,8 +11,8 @@ struct RootView: View {
         VStack(spacing: 0) {
             composerArea
                 .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
 
             if let errorMessage = viewModel.errorMessage {
                 ErrorBannerView(
@@ -34,7 +34,11 @@ struct RootView: View {
                 onStop: viewModel.stop
             )
         }
-        .frame(minWidth: 480, minHeight: 320)
+        .frame(
+            minWidth: 480,
+            minHeight: showOutput ? 320 : 220,
+            maxHeight: showOutput ? 560 : 250
+        )
         .toolbar(.hidden, for: .windowToolbar)
         .overlay {
             if viewModel.isRunning {
@@ -75,7 +79,6 @@ struct RootView: View {
                     showDisabledReason: true
                 )
                 .frame(minHeight: 120, maxHeight: 160)
-                Spacer(minLength: 0)
             }
         }
     }

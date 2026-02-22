@@ -17,8 +17,8 @@ struct InputEditorView: View {
                 Text("Describe what you want the prompt to do...")
                     .font(.system(size: 14, design: .monospaced))
                     .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 16)
+                    .padding(.leading, 13)
+                    .padding(.top, 8)
                     .allowsHitTesting(false)
             }
         }

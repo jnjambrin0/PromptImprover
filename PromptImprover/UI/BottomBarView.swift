@@ -68,13 +68,13 @@ struct BottomBarView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 Text(selectedModelName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -83,8 +83,14 @@ struct BottomBarView: View {
             )
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .fixedSize()
         .disabled(outputModels.isEmpty)
+        .onHover { hovering in
+            guard !outputModels.isEmpty else { return }
+            if hovering { NSCursor.pointingHand.push() }
+            else { NSCursor.pop() }
+        }
     }
 
     private var selectedModelName: String {
