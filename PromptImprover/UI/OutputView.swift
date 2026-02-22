@@ -31,18 +31,15 @@ struct OutputView: View {
             TextEditor(text: readOnlyOutputBinding)
                 .writingToolsBehavior(.disabled)
                 .font(.system(size: 13, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .background(VisualEffectView(material: .contentBackground, blendingMode: .withinWindow))
-                .cornerRadius(8)
-                .frame(minHeight: 120, idealHeight: 220, maxHeight: .infinity)
-                .padding(2) // Give space for the border
+                .frame(height: 220)
+                .padding(6)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 8)
                         .stroke(
                             hasOutput
-                                ? Color.accentColor.opacity(0.7)
+                                ? Color.accentColor.opacity(0.5)
                                 : Color.secondary.opacity(0.4),
-                            lineWidth: 1.5
+                            lineWidth: 1
                         )
                 )
                 .textSelection(.enabled)

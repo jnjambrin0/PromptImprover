@@ -2,39 +2,20 @@ import SwiftUI
 
 struct RootView: View {
     @ObservedObject var viewModel: PromptImproverViewModel
-    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             controls
-            
             PromptEditorView(text: $viewModel.inputPrompt)
-            
-            if viewModel.isRunning || !viewModel.outputPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                OutputView(
-                    output: viewModel.outputPrompt,
-                    isRunning: viewModel.isRunning,
-                    onCopy: viewModel.copyOutputToClipboard
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            
+            OutputView(
+                output: viewModel.outputPrompt,
+                isRunning: viewModel.isRunning,
+                onCopy: viewModel.copyOutputToClipboard
+            )
             statusArea
         }
-        .padding(20)
-        .frame(minWidth: 820, minHeight: 600)
-        .background(
-            Group {
-                if reduceTransparency {
-                    Color(NSColor.windowBackgroundColor)
-                } else {
-                    VisualEffectView(material: .underWindowBackground, blendingMode: .behindWindow)
-                }
-            }
-            .ignoresSafeArea()
-        )
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isRunning)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.outputPrompt)
+        .padding(16)
+        .frame(minWidth: 820, minHeight: 700)
     }
 
     private var controls: some View {
