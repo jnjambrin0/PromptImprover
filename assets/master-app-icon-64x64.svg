@@ -1,0 +1,40 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_0_75)">
+<g clip-path="url(#clip0_0_75)">
+<path d="M48 46.3168C48 38.4098 54.4099 32 62.3168 32H97.6832C105.59 32 112 38.4099 112 46.3168V81.6832C112 89.5902 105.59 96 97.6832 96H62.3168C54.4098 96 48 89.5901 48 81.6832V46.3168Z" fill="url(#paint0_radial_0_75)"/>
+<g filter="url(#filter1_d_0_75)">
+<path d="M77 49.5C77 47.8431 78.3431 46.5 80 46.5C81.6569 46.5 83 47.8431 83 49.5V78.5C83 80.1569 81.6569 81.5 80 81.5C78.3431 81.5 77 80.1569 77 78.5V49.5Z" fill="white"/>
+</g>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_0_75" x="0" y="0" width="160" height="160" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="16"/>
+<feGaussianBlur stdDeviation="24"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_75"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_75" result="shape"/>
+</filter>
+<filter id="filter1_d_0_75" x="45" y="22.5" width="70" height="99" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="8"/>
+<feGaussianBlur stdDeviation="16"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.572549 0 0 0 0 0.25098 0 0 0 0 0.054902 0 0 0 0.5 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_75"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_75" result="shape"/>
+</filter>
+<radialGradient id="paint0_radial_0_75" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(80 56.32) rotate(-90) scale(92.16)">
+<stop stop-color="#FCD34D"/>
+<stop offset="0.45" stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#B45309"/>
+</radialGradient>
+<clipPath id="clip0_0_75">
+<path d="M48 46.3168C48 38.4098 54.4099 32 62.3168 32H97.6832C105.59 32 112 38.4099 112 46.3168V81.6832C112 89.5902 105.59 96 97.6832 96H62.3168C54.4098 96 48 89.5901 48 81.6832V46.3168Z" fill="white"/>
+</clipPath>
+</defs>
+</svg>
