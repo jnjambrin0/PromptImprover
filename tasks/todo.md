@@ -177,3 +177,19 @@ Use this file to track the current task with checkable items.
   - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
 - Risks/Follow-ups:
   - Manual resize smoke is still recommended for edge-case splitter positions in Settings.
+
+## Task 3B Guides Modularization Checklist
+- [x] Split `GuidesSettingsView` monolith into focused files under `UI/Settings/Guides/`
+- [x] Keep behavior unchanged for editor/mapping flows, dirty guards, fork/revert actions, and dialogs
+- [x] Move helper types (`GuidesErrorState`, transition/workspace enums) into dedicated types file
+- [x] Remove legacy monolithic `UI/Settings/GuidesSettingsView.swift`
+- [x] Re-run full unit suite and macOS app build
+- [ ] Manual in-app smoke of Guides flows after refactor
+
+## Review (Task 3B Guides Modularization)
+- Result: Completed. `GuidesSettingsView` was decomposed from one large file into a multi-file feature slice (`View`, `State`, `Panes`, `Actions`, `EditorFlow`, `Types`) to reduce cognitive load and make future UX changes safer.
+- Verification:
+  - `swift test` (80 tests passed)
+  - `/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (build succeeded)
+- Risks/Follow-ups:
+  - Manual UI smoke remains recommended to validate no interaction regressions across all Guides transitions after structural refactor.

@@ -410,3 +410,21 @@ When behavior changes, update this file in the same change:
   - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
 - Durable caveats:
   - Keep split-pane minimums internally consistent; avoid parent min-width constraints that are smaller than child aggregate minimums.
+
+## Maintenance Update (2026-02-22, Task 3B Guides View Modularization)
+- What changed:
+  - Refactored the large `GuidesSettingsView` implementation into a dedicated feature folder:
+    - `UI/Settings/Guides/GuidesSettingsView.swift` (root view + lifecycle/dialog wiring + stored state),
+    - `UI/Settings/Guides/GuidesSettingsView+State.swift` (derived bindings/computed UI state),
+    - `UI/Settings/Guides/GuidesSettingsView+Panes.swift` (layout and pane composition),
+    - `UI/Settings/Guides/GuidesSettingsView+Actions.swift` (catalog/library CRUD actions),
+    - `UI/Settings/Guides/GuidesSettingsView+EditorFlow.swift` (editor transitions, dirty guards, load/save/revert flow),
+    - `UI/Settings/Guides/GuidesSettingsTypes.swift` (supporting UI types/enums).
+  - Removed legacy monolithic file `UI/Settings/GuidesSettingsView.swift`.
+- Why it changed:
+  - Reduce maintenance risk and review complexity after Task 3B UX growth; the previous single-file view exceeded 1k lines and mixed layout/state/flow concerns.
+- How it was verified:
+  - `swift test` (80 tests passed).
+  - `xcodebuild -project PromptImprover.xcodeproj -scheme PromptImprover -configuration Debug -sdk macosx build` (succeeds).
+- Durable caveats:
+  - The refactor is intentionally behavior-preserving; keep new Guides-related edits within the `UI/Settings/Guides/` slice to avoid recreating a monolithic view file.
