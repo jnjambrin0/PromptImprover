@@ -61,6 +61,10 @@ final class PromptImproverViewModel: ObservableObject {
         status == .running
     }
 
+    var hasOutput: Bool {
+        !outputPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var selectedToolAvailability: CLIAvailability? {
         availabilityByTool[selectedTool]
     }

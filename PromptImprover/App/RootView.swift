@@ -3,78 +3,75 @@ import SwiftUI
 struct RootView: View {
     @ObservedObject var viewModel: PromptImproverViewModel
 
+    private var showOutput: Bool {
+        viewModel.isRunning || viewModel.hasOutput
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            controls
-            PromptEditorView(text: $viewModel.inputPrompt)
-            OutputView(
-                output: viewModel.outputPrompt,
-                isRunning: viewModel.isRunning,
-                onCopy: viewModel.copyOutputToClipboard
-            )
-            statusArea
-        }
-        .padding(16)
-        .frame(minWidth: 820, minHeight: 700)
-    }
-
-    private var controls: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Picker("Tool", selection: $viewModel.selectedTool) {
-                ForEach(Tool.allCases) { tool in
-                    Text(tool.displayName).tag(tool)
-                }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 220)
-
-            Picker("Target output model", selection: $viewModel.selectedTargetSlug) {
-                ForEach(viewModel.outputModels) { model in
-                    Text(model.displayName).tag(model.slug)
-                }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 220)
-            .disabled(viewModel.outputModels.isEmpty)
-
-            Spacer()
-
-            if viewModel.isRunning {
-                Button("Stop", action: viewModel.stop)
-                    .buttonStyle(.bordered)
-                    .keyboardShortcut(.cancelAction)
-                    .onHover { hovering in
-                        if hovering { NSCursor.pointingHand.push() }
-                        else { NSCursor.pop() }
-                    }
-            }
-
-            Button(action: viewModel.improve) {
-                Label("Improve", systemImage: "wand.and.stars")
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canImprove)
-            .keyboardShortcut(.defaultAction)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() }
-                else { NSCursor.pop() }
-            }
-        }
-    }
-
-    private var statusArea: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Status: \(viewModel.statusMessage)")
-                .font(.footnote)
+        VStack(spacing: 0) {
+            composerArea
+                .padding(.horizontal, 48)
+                .padding(.top, 24)
+                .padding(.bottom, 12)
 
             if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            } else if let disabledReason = viewModel.improveDisabledReason, !viewModel.isRunning {
-                Text(disabledReason)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                ErrorBannerView(
+                    message: errorMessage,
+                    onDismiss: { viewModel.errorMessage = nil }
+                )
+                .padding(.horizontal, 48)
+                .padding(.bottom, 8)
+                .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
+            }
+
+            BottomBarView(
+                selectedTool: $viewModel.selectedTool,
+                selectedTargetSlug: $viewModel.selectedTargetSlug,
+                outputModels: viewModel.outputModels,
+                isRunning: viewModel.isRunning,
+                canImprove: viewModel.canImprove,
+                onImprove: viewModel.improve,
+                onStop: viewModel.stop
+            )
+        }
+        .frame(minWidth: 640, minHeight: 480)
+        .animation(.easeInOut(duration: 0.35), value: showOutput)
+    }
+
+    @ViewBuilder
+    private var composerArea: some View {
+        if showOutput {
+            VStack(spacing: 0) {
+                InputEditorView(
+                    text: $viewModel.inputPrompt,
+                    disabledReason: viewModel.improveDisabledReason,
+                    showDisabledReason: false
+                )
+
+                if viewModel.isRunning {
+                    StreamingIndicatorView()
+                        .padding(.vertical, 6)
+                } else {
+                    Spacer()
+                        .frame(height: 12)
+                }
+
+                OutputEditorView(
+                    output: viewModel.outputPrompt,
+                    onCopy: viewModel.copyOutputToClipboard
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        } else {
+            VStack(spacing: 0) {
+                Spacer()
+                InputEditorView(
+                    text: $viewModel.inputPrompt,
+                    disabledReason: viewModel.improveDisabledReason,
+                    showDisabledReason: true
+                )
+                .frame(maxHeight: 400)
+                Spacer()
             }
         }
     }
