@@ -43,7 +43,8 @@ mkdir -p "$worktree_dir/$GITHUB_PAGES_PATH"
 rsync -a --delete "$UPDATES_DIR/" "$worktree_dir/$GITHUB_PAGES_PATH/"
 
 if [[ -n "$(git -C "$worktree_dir" status --porcelain)" ]]; then
-  git -C "$worktree_dir" add "$GITHUB_PAGES_PATH"
+  # updates/ is ignored in the app branch; force add in pages worktree.
+  git -C "$worktree_dir" add -f "$GITHUB_PAGES_PATH"
   git -C "$worktree_dir" commit -m "Publish updates for $release_tag"
   git -C "$worktree_dir" push origin HEAD:"$GITHUB_PAGES_BRANCH"
 else
