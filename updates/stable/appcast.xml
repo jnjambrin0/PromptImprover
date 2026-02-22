@@ -7,6 +7,19 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>PromptImprover</title>
         <item>
             <title>0.1.0</title>
+            <pubDate>Sun, 22 Feb 2026 22:58:06 +0000</pubDate>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-3.dmg" length="3445276" type="application/octet-stream" sparkle:edSignature="6fPKw1nXWg89i9gcxnK70Ea2n/dNYhxLK3OG7fSCbZIKQZwykIYLHEAD/GfFgRW6CQ0h/DAm/vIpX3sasDQZDA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover3-2.delta" sparkle:deltaFrom="2" length="161250" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="TomS3GtHr8epBBiScHLGBtXCJoW7w4DMcX4fXxp0gboLQ7+3As2gj53YVG92IEc6YJfEEjWDm2uo1u53U/wuDQ=="/>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover3-1.delta" sparkle:deltaFrom="1" length="171194" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="YrnUDTJfZFcJMiX65+C0LrsapaXsLvc9PV4bGkDnsy594oOqr+CjkFPIbYM9hUfO1Vjqi6idogOEwTEAD4YCCw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
+            <title>0.1.0</title>
             <pubDate>Sun, 22 Feb 2026 22:54:56 +0000</pubDate>
             <sparkle:version>2</sparkle:version>
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
@@ -29,6 +42,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ihZiWTZraq9bIlwLu0Cplx5h2YL/dREgE4vFLFEOFvoUb6AD8WaOA8nwBXdorlL06zLSore868XyhXSz40MABQ==
-length: 2253
+edSignature: deW8A3sywDdT1eipWm2Fy7RuO6+TnA7NE6MD/BtgmE0sCo+rrP07p0Eun8KV8ZKhuW9HwyNEazG1IuMUSliLCg==
+length: 3795
 -->
