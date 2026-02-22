@@ -8,6 +8,7 @@ struct PromptImproverApp: App {
         WindowGroup {
             RootView(viewModel: viewModel)
         }
+        .defaultSize(width: 520, height: 360)
 
         Settings {
             SettingsRootView(viewModel: viewModel)

@@ -10,8 +10,8 @@ struct RootView: View {
     var body: some View {
         VStack(spacing: 0) {
             composerArea
-                .padding(.horizontal, 48)
-                .padding(.top, 24)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
                 .padding(.bottom, 12)
 
             if let errorMessage = viewModel.errorMessage {
@@ -19,7 +19,7 @@ struct RootView: View {
                     message: errorMessage,
                     onDismiss: { viewModel.errorMessage = nil }
                 )
-                .padding(.horizontal, 48)
+                .padding(.horizontal, 24)
                 .padding(.bottom, 8)
                 .animation(.easeInOut(duration: 0.25), value: viewModel.errorMessage)
             }
@@ -34,8 +34,16 @@ struct RootView: View {
                 onStop: viewModel.stop
             )
         }
-        .frame(minWidth: 640, minHeight: 480)
+        .frame(minWidth: 480, minHeight: 320)
+        .overlay {
+            if viewModel.isRunning {
+                NeonBorderView(cornerRadius: 10)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
         .animation(.easeInOut(duration: 0.35), value: showOutput)
+        .animation(.easeInOut(duration: 0.4), value: viewModel.isRunning)
     }
 
     @ViewBuilder
@@ -47,14 +55,10 @@ struct RootView: View {
                     disabledReason: viewModel.improveDisabledReason,
                     showDisabledReason: false
                 )
+                .frame(minHeight: 80, maxHeight: 140)
 
-                if viewModel.isRunning {
-                    StreamingIndicatorView()
-                        .padding(.vertical, 6)
-                } else {
-                    Spacer()
-                        .frame(height: 12)
-                }
+                Spacer()
+                    .frame(height: 8)
 
                 OutputEditorView(
                     output: viewModel.outputPrompt,
@@ -64,14 +68,13 @@ struct RootView: View {
             }
         } else {
             VStack(spacing: 0) {
-                Spacer()
                 InputEditorView(
                     text: $viewModel.inputPrompt,
                     disabledReason: viewModel.improveDisabledReason,
                     showDisabledReason: true
                 )
-                .frame(maxHeight: 400)
-                Spacer()
+                .frame(minHeight: 120, maxHeight: 160)
+                Spacer(minLength: 0)
             }
         }
     }

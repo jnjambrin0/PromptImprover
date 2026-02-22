@@ -9,6 +9,8 @@ struct BottomBarView: View {
     let onImprove: () -> Void
     let onStop: () -> Void
 
+    @Namespace private var toolPickerNamespace
+
     var body: some View {
         HStack(spacing: 12) {
             toolPicker
@@ -22,26 +24,32 @@ struct BottomBarView: View {
     }
 
     private var toolPicker: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
             ForEach(Tool.allCases) { tool in
-                toolPill(tool)
+                toolSegment(tool)
             }
         }
+        .padding(3)
+        .background(Capsule().fill(Color.secondary.opacity(0.12)))
     }
 
-    private func toolPill(_ tool: Tool) -> some View {
-        Button(action: { selectedTool = tool }) {
+    private func toolSegment(_ tool: Tool) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTool = tool
+            }
+        }) {
             Text(tool.shortDisplayName)
                 .font(.caption)
                 .fontWeight(selectedTool == tool ? .semibold : .regular)
                 .foregroundStyle(selectedTool == tool ? Color.accentColor : .secondary)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
                 .background {
                     if selectedTool == tool {
-                        Capsule().fill(Color.accentColor.opacity(0.15))
-                    } else {
-                        Capsule().fill(Color.secondary.opacity(0.1))
+                        Capsule()
+                            .fill(Color.accentColor.opacity(0.15))
+                            .matchedGeometryEffect(id: "toolPill", in: toolPickerNamespace)
                     }
                 }
         }

@@ -19,7 +19,7 @@ struct OutputEditorView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        VStack(spacing: 0) {
             TextEditor(text: readOnlyBinding)
                 .writingToolsBehavior(.disabled)
                 .font(.system(size: 14, design: .monospaced))
@@ -28,8 +28,13 @@ struct OutputEditorView: View {
                 .textSelection(.enabled)
 
             if hasOutput {
-                copyButton
-                    .padding(8)
+                Divider()
+                HStack {
+                    Spacer()
+                    copyButton
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
             }
         }
         .background(
