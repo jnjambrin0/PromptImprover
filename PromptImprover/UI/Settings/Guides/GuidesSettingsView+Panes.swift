@@ -26,7 +26,7 @@ extension GuidesSettingsView {
     var editorWorkspacePane: some View {
         HSplitView {
             guideLibraryPane
-                .frame(minWidth: 250, idealWidth: 290, maxWidth: 360)
+                .frame(minWidth: 220, idealWidth: 270, maxWidth: 360)
 
             guideEditorPane
                 .frame(minWidth: 400, maxWidth: .infinity)
@@ -36,7 +36,7 @@ extension GuidesSettingsView {
     var outputModelsPane: some View {
         VStack(alignment: .leading, spacing: 12) {
             GroupBox("Output Models") {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
                     List(outputModels, selection: $selectedOutputSlug) { model in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.displayName)
@@ -45,38 +45,94 @@ extension GuidesSettingsView {
                                 .foregroundStyle(.secondary)
                         }
                         .tag(model.slug)
+                        .contextMenu {
+                            Button("Edit...") {
+                                selectedOutputSlug = model.slug
+                                editDisplayName = model.displayName
+                                editSlug = model.slug
+                                showEditOutputPopover = true
+                            }
+                            Divider()
+                            Button("Delete", role: .destructive) {
+                                selectedOutputSlug = model.slug
+                                DispatchQueue.main.async { requestDeleteSelectedOutputModel() }
+                            }
+                        }
                     }
                     .frame(minHeight: 200)
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("New display name", text: $addDisplayName)
-                            .textFieldStyle(.roundedBorder)
-                        TextField("New slug (e.g. gpt-5-2)", text: $addSlug)
-                            .textFieldStyle(.roundedBorder)
-                        Button("Add Output Model", action: addOutputModel)
-                            .disabled(!canAddOutputModel)
-                    }
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Selected display name", text: $editDisplayName)
-                            .textFieldStyle(.roundedBorder)
-                        TextField("Selected slug", text: $editSlug)
-                            .textFieldStyle(.roundedBorder)
-
-                        HStack(spacing: 8) {
-                            Button("Save Changes", action: saveSelectedOutputModel)
-                                .disabled(!canSaveSelectedOutputModel)
-                            Button("Delete", role: .destructive, action: requestDeleteSelectedOutputModel)
-                                .disabled(selectedOutputModel == nil)
+                    HStack(spacing: 4) {
+                        Button(action: { showAddOutputPopover = true }) {
+                            Image(systemName: "plus")
                         }
+                        .popover(isPresented: $showAddOutputPopover) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Add Output Model")
+                                    .font(.headline)
+                                TextField("Display name", text: $addDisplayName)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(minWidth: 220)
+                                TextField("Slug (e.g. gpt-5-2)", text: $addSlug)
+                                    .textFieldStyle(.roundedBorder)
+                                HStack {
+                                    Spacer()
+                                    Button("Cancel") {
+                                        addDisplayName = ""
+                                        addSlug = ""
+                                        showAddOutputPopover = false
+                                    }
+                                    .keyboardShortcut(.cancelAction)
+                                    Button("Add") {
+                                        addOutputModel()
+                                        showAddOutputPopover = false
+                                    }
+                                    .keyboardShortcut(.defaultAction)
+                                    .disabled(!canAddOutputModel)
+                                }
+                            }
+                            .padding(12)
+                        }
+
+                        Button(action: requestDeleteSelectedOutputModel) {
+                            Image(systemName: "minus")
+                        }
+                        .disabled(selectedOutputModel == nil)
+
+                        Spacer()
+                    }
+                    .popover(isPresented: $showEditOutputPopover) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Edit Output Model")
+                                .font(.headline)
+                            TextField("Display name", text: $editDisplayName)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 220)
+                            TextField("Slug", text: $editSlug)
+                                .textFieldStyle(.roundedBorder)
+                            HStack {
+                                Spacer()
+                                Button("Cancel") {
+                                    syncEditorsFromSelectedOutput()
+                                    showEditOutputPopover = false
+                                }
+                                .keyboardShortcut(.cancelAction)
+                                Button("Save") {
+                                    saveSelectedOutputModel()
+                                    showEditOutputPopover = false
+                                }
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(!canSaveSelectedOutputModel)
+                            }
+                        }
+                        .padding(12)
                     }
 
                     Button("Reset built-in defaults") {
                         viewModel.resetBuiltInOutputModelsAndMappings()
                         syncSelectionAfterCatalogChange()
                     }
+                    .controlSize(.small)
+                    .buttonStyle(.borderless)
                     .help("Restores built-in output models and their mappings while preserving user-created models and guides.")
                 }
                 .padding(.top, 4)
@@ -108,6 +164,28 @@ extension GuidesSettingsView {
                                 .foregroundStyle(.secondary)
                         }
                         .tag(guide.id)
+                        .contextMenu {
+                            Button("Move Up") {
+                                selectedMappedGuideID = guide.id
+                                DispatchQueue.main.async { moveSelectedGuideUp() }
+                            }
+                            .disabled(orderedGuidesForSelectedOutput.first?.id == guide.id)
+                            Button("Move Down") {
+                                selectedMappedGuideID = guide.id
+                                DispatchQueue.main.async { moveSelectedGuideDown() }
+                            }
+                            .disabled(orderedGuidesForSelectedOutput.last?.id == guide.id)
+                            Divider()
+                            Button("Open in Editor") {
+                                selectedMappedGuideID = guide.id
+                                DispatchQueue.main.async { openSelectedMappedGuideInEditor() }
+                            }
+                            Divider()
+                            Button("Unassign") {
+                                selectedMappedGuideID = guide.id
+                                DispatchQueue.main.async { unassignSelectedGuide() }
+                            }
+                        }
                     }
                     .frame(minHeight: 120, maxHeight: .infinity)
 
@@ -122,21 +200,12 @@ extension GuidesSettingsView {
 
                         Button("Assign", action: assignSelectedGuide)
                             .disabled(!canAssignSelectedGuide)
-                    }
 
-                    HStack(spacing: 8) {
-                        Button("Move Up", action: moveSelectedGuideUp)
-                            .disabled(!canMoveSelectedGuideUp)
-                        Button("Move Down", action: moveSelectedGuideDown)
-                            .disabled(!canMoveSelectedGuideDown)
-                        Button("Unassign", action: unassignSelectedGuide)
-                            .disabled(!canUnassignSelectedGuide)
-                    }
-
-                    HStack(spacing: 8) {
-                        Button("Open in Editor", action: openSelectedMappedGuideInEditor)
-                            .disabled(selectedMappedGuideID == nil)
-                        Spacer()
+                        Button(action: unassignSelectedGuide) {
+                            Image(systemName: "minus")
+                        }
+                        .disabled(!canUnassignSelectedGuide)
+                        .help("Unassign selected guide")
                     }
                 } else {
                     ContentUnavailableView(
@@ -236,12 +305,6 @@ extension GuidesSettingsView {
                     }
 
                     Spacer()
-
-                    if isEditorDirty {
-                        Text("Unsaved changes")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
                 }
 
                 if editorGuide != nil {
@@ -267,26 +330,35 @@ extension GuidesSettingsView {
                     }
 
                     HStack(spacing: 8) {
-                        if canStartForkEdit {
-                            Button("Edit", action: beginEditingSelectedGuide)
-                        }
-
                         Button("Save", action: saveEditorChanges)
                             .disabled(!canSaveEditorChanges)
 
                         Button("Discard", action: discardEditorChanges)
                             .disabled(!canDiscardEditorChanges)
 
-                        if canRevertToBuiltIn {
-                            Button("Revert to built-in", role: .destructive) {
-                                requestRevertSelectedGuide()
+                        Menu {
+                            if canStartForkEdit {
+                                Button("Edit (Create Fork)", action: beginEditingSelectedGuide)
                             }
+                            if canRevertToBuiltIn {
+                                Button("Revert to Built-In", role: .destructive) {
+                                    requestRevertSelectedGuide()
+                                }
+                            }
+                            Divider()
+                            Button("Close Editor") {
+                                requestCloseEditor()
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
 
                         Spacer()
 
-                        Button("Close Editor") {
-                            requestCloseEditor()
+                        if isEditorDirty {
+                            Text("Unsaved changes")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
                         }
                     }
                 } else {
