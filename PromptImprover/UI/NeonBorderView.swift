@@ -12,11 +12,10 @@ struct NeonBorderView: View {
         AngularGradient(
             gradient: Gradient(stops: [
                 .init(color: .clear, location: 0.0),
-                .init(color: .clear, location: 0.55),
-                .init(color: Color.accentColor.opacity(0.6), location: 0.7),
-                .init(color: .white.opacity(0.9), location: 0.78),
-                .init(color: Color.accentColor.opacity(0.6), location: 0.86),
-                .init(color: .clear, location: 0.95),
+                .init(color: .clear, location: 0.78),
+                .init(color: Color.accentColor.opacity(0.5), location: 0.86),
+                .init(color: .white.opacity(0.9), location: 0.92),
+                .init(color: Color.accentColor.opacity(0.5), location: 0.96),
                 .init(color: .clear, location: 1.0),
             ]),
             center: .center,
@@ -25,16 +24,15 @@ struct NeonBorderView: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius)
-
         ZStack {
-            shape
-                .stroke(gradient, lineWidth: lineWidth * 2)
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(gradient, lineWidth: lineWidth * 2)
                 .blur(radius: glowRadius)
 
-            shape
-                .stroke(gradient, lineWidth: lineWidth)
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(gradient, lineWidth: lineWidth)
         }
+        .padding(2)
         .onAppear {
             withAnimation(
                 .linear(duration: duration)
