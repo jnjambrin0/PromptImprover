@@ -1,0 +1,19 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>PromptImprover</title>
+        <item>
+            <title>1.0</title>
+            <pubDate>Sun, 22 Feb 2026 18:00:30 +0100</pubDate>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-1.dmg" length="3438622" type="application/octet-stream" sparkle:edSignature="AmbwlEn7iFjCAnUPUHhtcW8q/G2KArC8TiypoqnZB41H3Gfsr2LxAMjOdsqZhFwl2f8rihf/uXeiHWc0t6T/Ag=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: tCgYKs2/FQEyve1StRjTr795ovyYwL78PfF0DF86815vJxMukhLTNoLrJNY0ekQjtX5G/Ve4anrYl3jgAcONAQ==
+length: 1121
+-->
