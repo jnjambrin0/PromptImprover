@@ -5,15 +5,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>PromptImprover</title>
         <item>
             <title>1.0</title>
-            <pubDate>Sun, 22 Feb 2026 18:00:30 +0100</pubDate>
+            <pubDate>Sun, 22 Feb 2026 21:50:51 +0000</pubDate>
             <sparkle:version>1</sparkle:version>
             <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-1.dmg" length="3438622" type="application/octet-stream" sparkle:edSignature="AmbwlEn7iFjCAnUPUHhtcW8q/G2KArC8TiypoqnZB41H3Gfsr2LxAMjOdsqZhFwl2f8rihf/uXeiHWc0t6T/Ag=="></enclosure>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-1.dmg" length="3437575" type="application/octet-stream" sparkle:edSignature="mn79pX68n/4fbLJn9muAOAVXpZtzg6fnUAN/fmuidcAsPjY/JfdL1aNAyPdQXruYbQ+OgOqTm0l1GgUi/Au2Ag=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: tCgYKs2/FQEyve1StRjTr795ovyYwL78PfF0DF86815vJxMukhLTNoLrJNY0ekQjtX5G/Ve4anrYl3jgAcONAQ==
+edSignature: KtOQmh863/+c8wWxDO3QzM9oq8u3kD1CbuiGeSu8Vpg8vAOunpbSFDnDzuRa+EepGWfXALqIeIbZGcikIhaVDQ==
 length: 1121
 -->
