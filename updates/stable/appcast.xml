@@ -1,8 +1,22 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>PromptImprover</title>
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Sun, 22 Feb 2026 22:54:56 +0000</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-2.dmg" length="3444078" type="application/octet-stream" sparkle:edSignature="TY226fAjcPnHe3sXwt7itlQIQgUin6ZhLNEPEuPoa5h0WRMhWjvRqM5zkGnswdD1eLH4nLW0E9JgF0JpGNG/Bg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover2-1.delta" sparkle:deltaFrom="1" length="162374" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="iPBbCq6lm1zGY4QTm6DLvIiyOUInJqV8SObxBl3A3q4QdLalXTRaV+pTiX6M3aLDHDQZn6eFtmN8Q5mXDjm8AA=="/>
+            </sparkle:deltas>
+        </item>
         <item>
             <title>1.0</title>
             <pubDate>Sun, 22 Feb 2026 21:50:51 +0000</pubDate>
@@ -10,10 +24,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-1.dmg" length="3437575" type="application/octet-stream" sparkle:edSignature="mn79pX68n/4fbLJn9muAOAVXpZtzg6fnUAN/fmuidcAsPjY/JfdL1aNAyPdQXruYbQ+OgOqTm0l1GgUi/Au2Ag=="></enclosure>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-1.dmg" length="3437575" type="application/octet-stream" sparkle:edSignature="mn79pX68n/4fbLJn9muAOAVXpZtzg6fnUAN/fmuidcAsPjY/JfdL1aNAyPdQXruYbQ+OgOqTm0l1GgUi/Au2Ag=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: KtOQmh863/+c8wWxDO3QzM9oq8u3kD1CbuiGeSu8Vpg8vAOunpbSFDnDzuRa+EepGWfXALqIeIbZGcikIhaVDQ==
-length: 1121
+</rss>
+<!-- sparkle-signatures:
+edSignature: ihZiWTZraq9bIlwLu0Cplx5h2YL/dREgE4vFLFEOFvoUb6AD8WaOA8nwBXdorlL06zLSore868XyhXSz40MABQ==
+length: 2253
 -->
