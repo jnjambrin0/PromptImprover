@@ -36,7 +36,7 @@ struct GuidesSettingsView: View {
     var body: some View {
         HSplitView {
             outputModelsPane
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 340)
+                .frame(minWidth: 180, idealWidth: 210, maxWidth: 280)
 
             rightWorkspacePane
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

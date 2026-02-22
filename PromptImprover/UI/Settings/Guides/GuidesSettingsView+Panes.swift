@@ -26,10 +26,10 @@ extension GuidesSettingsView {
     var editorWorkspacePane: some View {
         HSplitView {
             guideLibraryPane
-                .frame(minWidth: 220, idealWidth: 270, maxWidth: 360)
+                .frame(minWidth: 200, idealWidth: 240, maxWidth: 320)
 
             guideEditorPane
-                .frame(minWidth: 400, maxWidth: .infinity)
+                .frame(minWidth: 350, maxWidth: .infinity)
         }
     }
 
