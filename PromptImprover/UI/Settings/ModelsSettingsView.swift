@@ -31,6 +31,10 @@ struct ModelsSettingsView: View {
 
     private var supportedEfforts: [EngineEffort] {
         let defaults = EngineSettingsDefaults.defaultSupportedEfforts(for: selectedTool)
+        if selectedTool == .codex {
+            return defaults
+        }
+
         guard let capabilities = viewModel.capabilitiesByTool[selectedTool], capabilities.supportsEffortConfig else {
             return defaults
         }

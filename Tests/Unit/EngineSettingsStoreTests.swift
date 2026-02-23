@@ -10,11 +10,11 @@ struct EngineSettingsStoreTests {
 
         var settings = EngineSettings.default
         settings[.codex] = ToolEngineSettings(
-            defaultEngineModel: "gpt-5-mini",
+            defaultEngineModel: "gpt-5.3-codex-spark",
             defaultEffort: .medium,
             customEngineModels: ["gpt-5-experimental", "o3-pro"],
             perModelEffortAllowlist: [
-                "gpt-5-mini": [.low, .medium],
+                "gpt-5.3-codex-spark": [.low, .medium],
                 "o3-pro": [.high]
             ]
         )
@@ -31,7 +31,7 @@ struct EngineSettingsStoreTests {
         let loaded = store.load()
 
         #expect(loaded == settings)
-        #expect(loaded[.codex].defaultEngineModel == "gpt-5-mini")
+        #expect(loaded[.codex].defaultEngineModel == "gpt-5.3-codex-spark")
         #expect(loaded[.claude].defaultEffort == .high)
     }
 
@@ -149,11 +149,11 @@ struct EngineSettingsStoreTests {
           "schemaVersion": 1,
           "settingsByTool": {
             "codex": {
-              "defaultEngineModel": "gpt-5",
+              "defaultEngineModel": "gpt-5.2",
               "defaultEffort": "medium",
               "customEngineModels": ["custom-codex"],
               "perModelEffortAllowlist": {
-                "gpt-5": ["medium"]
+                "gpt-5.2": ["medium"]
               }
             },
             "future_tool": {
@@ -172,7 +172,7 @@ struct EngineSettingsStoreTests {
         let store = EngineSettingsStore(fileURL: fileURL)
         let loaded = store.load()
 
-        #expect(loaded[.codex].defaultEngineModel == "gpt-5")
+        #expect(loaded[.codex].defaultEngineModel == "gpt-5.2")
         #expect(loaded.byTool.count == 1)
     }
 

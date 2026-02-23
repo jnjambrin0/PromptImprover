@@ -88,12 +88,12 @@ struct ToolCapabilityDetector: ToolCapabilityDetecting {
 
         let parsedValues = ToolCapabilityDetector.extractEffortValues(from: lowerHelp, for: .codex)
         if hasExplicitEffortSignal {
+            let defaultValues = EngineSettingsDefaults.defaultSupportedEfforts(for: .codex)
+            let mergedValues = ToolEngineSettings.orderedUniqueEfforts(parsedValues + defaultValues)
             return ToolCapabilities(
                 supportsModelFlag: supportsModelFlag,
                 supportsEffortConfig: true,
-                supportedEffortValues: parsedValues.isEmpty
-                    ? EngineSettingsDefaults.defaultSupportedEfforts(for: .codex)
-                    : parsedValues
+                supportedEffortValues: parsedValues.isEmpty ? defaultValues : mergedValues
             )
         }
 
