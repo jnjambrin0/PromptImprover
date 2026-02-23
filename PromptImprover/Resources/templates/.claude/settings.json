@@ -1,0 +1,8 @@
+{
+  "memory": {
+    "enabled": false
+  },
+  "backgroundTasks": {
+    "enabled": false
+  }
+}

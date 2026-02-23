@@ -40,6 +40,7 @@ PROMPT_IMPROVER_RUN_CLI_SMOKE=1 swift test --filter CLISmokeTests
 
 - [ ] Scope is focused and avoids unrelated refactors.
 - [ ] Tests were added/updated when behavior changed.
+- [ ] I ran the relevant test commands for this PR and attached results in **Verification**.
 - [ ] Documentation was updated when user-visible behavior changed.
 - [ ] UI changes include screenshots or short recordings.
 - [ ] Security-sensitive changes considered [SECURITY.md](https://github.com/jnjambrin0/PromptImprover/blob/main/SECURITY.md) implications.

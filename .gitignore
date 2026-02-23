@@ -29,6 +29,8 @@
 .cursorrules.jsonc
 
 .claude
+!PromptImprover/Resources/templates/.claude/
+!PromptImprover/Resources/templates/.claude/settings.json
 
 .playwright-mcp
 

@@ -28,13 +28,32 @@ jobs:
 
   app_target_tests:
     name: App Target Tests
-    runs-on: macos-15
+    runs-on: ${{ vars.PROMPT_IMPROVER_APP_TEST_RUNNER || 'macos-15' }}
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect runner/deployment-target compatibility
+        id: compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_target="$(grep -oE 'MACOSX_DEPLOYMENT_TARGET = [0-9]+([.][0-9]+){0,2};' PromptImprover.xcodeproj/project.pbxproj | sed -E 's/.*= ([0-9]+([.][0-9]+){0,2});/\1/' | sort -V | tail -n1)"
+          host_target="$(sw_vers -productVersion)"
+
+          echo "Host macOS version: ${host_target}"
+          echo "Project deployment target: ${required_target}"
+
+          if [[ "$(printf '%s\n%s\n' "${required_target}" "${host_target}" | sort -V | head -n1)" == "${required_target}" ]]; then
+            echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Resolve package dependencies
+        if: steps.compatibility.outputs.should_run == 'true'
         run: |
           /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
             -resolvePackageDependencies \
@@ -42,9 +61,15 @@ jobs:
             -scheme PromptImprover
 
       - name: Run xcodebuild test
+        if: steps.compatibility.outputs.should_run == 'true'
         run: |
           /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
             -project PromptImprover.xcodeproj \
             -scheme PromptImprover \
             -destination 'platform=macOS' \
             test
+
+      - name: Skip note for incompatible runner
+        if: steps.compatibility.outputs.should_run != 'true'
+        run: |
+          echo "::warning::Skipping App Target Tests because runner macOS is lower than project deployment target. Configure PROMPT_IMPROVER_APP_TEST_RUNNER with a compatible label to run these tests in CI."
