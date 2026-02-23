@@ -7,6 +7,22 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>PromptImprover</title>
         <item>
             <title>0.1.0</title>
+            <pubDate>Mon, 23 Feb 2026 22:15:51 +0000</pubDate>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-6.dmg" length="3818409" type="application/octet-stream" sparkle:edSignature="aqJRmZQr7Xk74jNLdPlPLoAG/njSQEQzvUqDW5HNIxNOYd6lawlY2ipT/OpBiMuN2iBoP3FZFCDtryLfvvU1AQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover6-5.delta" sparkle:deltaFrom="5" length="210066" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UrGpYPgDmL+mQPORux7/zS0AgE0NtcP51y4M5jH4hI32LTtIaqyfrK6UaOotKvcSjdu9ynqIDw0XWBVM3FMsDQ=="/>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover6-4.delta" sparkle:deltaFrom="4" length="438642" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LCGQkySbewJSP1FIQS4ry7YJz1QUSRDULslHE3GtuK1vThdDM8pT29Hxg301pdY2Ro7QDK0RnkFMlzdKLv7RDA=="/>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover6-3.delta" sparkle:deltaFrom="3" length="448826" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vXvDsVrO/5ibsIRPw7p3UegPyM6O0no2bDz6gBKicS1vWhrz8BF5mxyEl9f5O3lEr4UMBa76ljnspP0YDVRfAQ=="/>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover6-2.delta" sparkle:deltaFrom="2" length="456822" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="s9ihMIkha4WaCkWrmUSViarK6ndefttXULedEv15KXiHKBnub2WSQBJU50lZX8FnnPzHamP5eF9CwAkTRfyMCQ=="/>
+                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover6-1.delta" sparkle:deltaFrom="1" length="463254" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Jl/YuOOSnURIkQxv1EN7S070DPNK3gKLvZ2prLZmKKs5X5tYbyHoLBuCS4JMQL/yuV06h/rG3q8TGY1OpmlmBw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
+            <title>0.1.0</title>
             <pubDate>Mon, 23 Feb 2026 21:55:07 +0000</pubDate>
             <sparkle:version>5</sparkle:version>
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
@@ -34,22 +50,9 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
                 <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover4-1.delta" sparkle:deltaFrom="1" length="202030" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="9Z2g5Zm9lAON2UG1NwxVzCNAhKsTwtev4RCFVvt/3pmq5w0iGbVDfYv5LsAYhlFSgIgmUjkS+SGSGcrdn3GdDg=="/>
             </sparkle:deltas>
         </item>
-        <item>
-            <title>0.1.0</title>
-            <pubDate>Sun, 22 Feb 2026 22:58:06 +0000</pubDate>
-            <sparkle:version>3</sparkle:version>
-            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover-3.dmg" length="3445276" type="application/octet-stream" sparkle:edSignature="6fPKw1nXWg89i9gcxnK70Ea2n/dNYhxLK3OG7fSCbZIKQZwykIYLHEAD/GfFgRW6CQ0h/DAm/vIpX3sasDQZDA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover3-2.delta" sparkle:deltaFrom="2" length="161250" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="TomS3GtHr8epBBiScHLGBtXCJoW7w4DMcX4fXxp0gboLQ7+3As2gj53YVG92IEc6YJfEEjWDm2uo1u53U/wuDQ=="/>
-                <enclosure url="https://jnjambrin0.github.io/PromptImprover/updates/stable/PromptImprover3-1.delta" sparkle:deltaFrom="1" length="171194" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="YrnUDTJfZFcJMiX65+C0LrsapaXsLvc9PV4bGkDnsy594oOqr+CjkFPIbYM9hUfO1Vjqi6idogOEwTEAD4YCCw=="/>
-            </sparkle:deltas>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: WmIa2+rfUY2JF+D2BG1CwQiNymOy93S8Gic5CIWMlhHz3yGm9CF8xLD7BzlZ7vfNaSgSuEWu5YTfkQLLywJlCQ==
-length: 6270
+edSignature: /PqJsGyG6hb03iZFVwt+vYozgKFZ2I0pPLEIz8kUkke0FziokYR9JE0SklZ6OFrZQRPjMTPBP7HIubAf8XM9DA==
+length: 7476
 -->
