@@ -215,13 +215,15 @@ jobs:
           RELEASE_SHORT_VERSION: ${{ needs.build_updates.outputs.release_short_version }}
           RELEASE_DMG_NAME: ${{ needs.build_updates.outputs.release_dmg_name }}
         run: |
+          public_release_dmg_name="PromptImprover-${RELEASE_TAG}.dmg"
           {
             echo "## Release Local Summary"
             echo ""
             echo "- Tag: \\`$RELEASE_TAG\\`"
             echo "- Build version (CFBundleVersion): \\`$RELEASE_BUILD_VERSION\\`"
             echo "- Short version: \\`$RELEASE_SHORT_VERSION\\`"
-            echo "- DMG: \\`$RELEASE_DMG_NAME\\`"
+            echo "- DMG public (GitHub Release): \\`$public_release_dmg_name\\`"
+            echo "- DMG feed Sparkle (interno): \\`$RELEASE_DMG_NAME\\`"
             echo "- Release URL: https://github.com/${GITHUB_REPOSITORY}/releases/tag/$RELEASE_TAG"
             echo "- Appcast URL: https://jnjambrin0.github.io/PromptImprover/updates/stable/appcast.xml"
           } >> "$GITHUB_STEP_SUMMARY"

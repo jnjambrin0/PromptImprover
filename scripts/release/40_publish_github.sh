@@ -101,20 +101,95 @@ run_with_timeout() {
   log "$label: completed in ${elapsed}s"
 }
 
+public_dmg_temp_dir=""
+worktree_dir=""
+cleanup() {
+  if [[ -n "${worktree_dir:-}" ]]; then
+    git -C "$REPO_ROOT" worktree remove "$worktree_dir" --force >/dev/null 2>&1 || true
+    rm -rf "$worktree_dir"
+  fi
+  if [[ -n "${public_dmg_temp_dir:-}" ]]; then
+    rm -rf "$public_dmg_temp_dir"
+  fi
+}
+trap cleanup EXIT
+
+list_release_asset_names() {
+  gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'
+}
+
+is_legacy_numbered_dmg_asset() {
+  local asset_name="$1"
+  local numeric_suffix
+
+  [[ "$asset_name" == "${APP_NAME}-"*.dmg ]] || return 1
+  numeric_suffix="${asset_name#${APP_NAME}-}"
+  numeric_suffix="${numeric_suffix%.dmg}"
+
+  [[ "$numeric_suffix" =~ ^[0-9]+([.][0-9]+){0,2}$ ]]
+}
+
+cleanup_legacy_numbered_dmg_assets() {
+  local asset_name
+  local cleaned_count=0
+
+  while IFS= read -r asset_name; do
+    [[ -n "$asset_name" ]] || continue
+    if is_legacy_numbered_dmg_asset "$asset_name"; then
+      run_with_timeout "Delete legacy release asset ($asset_name)" \
+        gh release delete-asset "$release_tag" "$asset_name" --repo "$GITHUB_REPOSITORY" --yes
+      cleaned_count="$((cleaned_count + 1))"
+    fi
+  done < <(list_release_asset_names || true)
+
+  if [[ "$cleaned_count" -gt 0 ]]; then
+    log "Deleted $cleaned_count legacy numbered DMG asset(s) from release $release_tag."
+  else
+    log "No legacy numbered DMG assets found for release $release_tag."
+  fi
+}
+
+validate_release_assets() {
+  local asset_name
+  local has_public_dmg=0
+  local legacy_assets=()
+
+  while IFS= read -r asset_name; do
+    [[ -n "$asset_name" ]] || continue
+    if [[ "$asset_name" == "$public_dmg_name" ]]; then
+      has_public_dmg=1
+    fi
+    if is_legacy_numbered_dmg_asset "$asset_name"; then
+      legacy_assets+=("$asset_name")
+    fi
+  done < <(list_release_asset_names || true)
+
+  [[ "$has_public_dmg" -eq 1 ]] || die "Expected canonical GitHub release DMG asset is missing: $public_dmg_name"
+  if [[ "${#legacy_assets[@]}" -gt 0 ]]; then
+    printf '[release] ERROR: Legacy numbered DMG assets remain in release %s:\n' "$release_tag" >&2
+    printf '  %s\n' "${legacy_assets[@]}" >&2
+    die "Canonical release asset validation failed."
+  fi
+}
+
 release_tag="${RELEASE_TAG:-}"
 if [[ -z "$release_tag" ]]; then
   release_tag="$(git -C "$REPO_ROOT" describe --tags --exact-match 2>/dev/null || true)"
 fi
 [[ -n "$release_tag" ]] || die "RELEASE_TAG is required (or run from an exact release tag checkout)."
 
-run_with_timeout "GitHub release asset upload" gh release upload "$release_tag" "$RELEASE_DMG_PATH" --repo "$GITHUB_REPOSITORY" --clobber
+public_dmg_name="${APP_NAME}-${release_tag}.dmg"
+public_dmg_temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/promptimprover-release-assets.XXXXXX")"
+public_dmg_path="$public_dmg_temp_dir/$public_dmg_name"
+cp "$RELEASE_DMG_PATH" "$public_dmg_path"
+
+cleanup_legacy_numbered_dmg_assets
+run_with_timeout "GitHub release asset upload ($public_dmg_name)" \
+  gh release upload "$release_tag" "$public_dmg_path" --repo "$GITHUB_REPOSITORY" --clobber
+validate_release_assets
+log "Canonical GitHub release asset published: $public_dmg_name"
 
 worktree_dir="$(mktemp -d "${TMPDIR:-/tmp}/promptimprover-pages.XXXXXX")"
-cleanup() {
-  git -C "$REPO_ROOT" worktree remove "$worktree_dir" --force >/dev/null 2>&1 || true
-  rm -rf "$worktree_dir"
-}
-trap cleanup EXIT
 
 if git -C "$REPO_ROOT" ls-remote --exit-code --heads origin "$GITHUB_PAGES_BRANCH" >/dev/null 2>&1; then
   run_with_timeout "Fetch GitHub Pages branch" git -C "$REPO_ROOT" fetch origin "$GITHUB_PAGES_BRANCH"

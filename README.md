@@ -256,6 +256,14 @@ Default CI/local settings for this path:
 - `LOCAL_MACOSX_DEPLOYMENT_TARGET=15.0`
 - `LOCAL_ADHOC_SIGN_APP=1`
 
+DMG naming model:
+- Sparkle feed/internal artifact (in `updates/stable`) remains build-versioned:
+  - `PromptImprover-<RELEASE_BUILD_VERSION>.dmg`
+- GitHub Release public asset is canonical by tag:
+  - `PromptImprover-<RELEASE_TAG>.dmg` (for example `PromptImprover-v1.2.3.dmg`)
+- During publish, legacy numbered GitHub Release DMG assets (`PromptImprover-<n>.dmg`) are automatically removed from the same release tag.
+- Sparkle build/version increments continue to affect feed/internal filenames, but no longer change the visible public DMG filename in GitHub Releases.
+
 2. Developer ID + notarized path (production-oriented):
 
 ```bash
