@@ -1,0 +1,4 @@
+2026-02-21T15:24:05.905328Z  WARN codex_core::state_db: state db record_discrepancy
+{"type":"thread.started","thread_id":"abc"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"partial output"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"{\"optimized_prompt\":\"Final optimized prompt\"}"}}

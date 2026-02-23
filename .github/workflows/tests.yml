@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  swift_package_tests:
+    name: Swift Package Tests
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run swift test
+        run: swift test
+
+  app_target_tests:
+    name: App Target Tests
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve package dependencies
+        run: |
+          /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+            -resolvePackageDependencies \
+            -project PromptImprover.xcodeproj \
+            -scheme PromptImprover
+
+      - name: Run xcodebuild test
+        run: |
+          /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+            -project PromptImprover.xcodeproj \
+            -scheme PromptImprover \
+            -destination 'platform=macOS' \
+            test

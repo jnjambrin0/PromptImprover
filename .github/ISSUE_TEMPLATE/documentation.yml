@@ -1,0 +1,46 @@
+name: Documentation
+description: Report a docs gap or propose documentation improvements.
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate docs request.
+          required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Affected Documentation
+      description: File path or section name.
+      placeholder: e.g. README.md -> Quickstart
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_gap
+    attributes:
+      label: Current Gap
+      description: What is unclear, missing, or incorrect?
+      placeholder: The docs currently ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_change
+    attributes:
+      label: Proposed Improvement
+      description: Suggested wording, structure, or examples.
+      placeholder: I suggest ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Screenshots, links, or related PRs/issues.
+

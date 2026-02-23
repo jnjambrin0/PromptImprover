@@ -1,0 +1,292 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      has_release_secrets: ${{ steps.release_prereq.outputs.has_release_secrets }}
+      release_tag: ${{ steps.release_prereq.outputs.release_tag }}
+    steps:
+      - name: Check release prerequisites
+        id: release_prereq
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          SPARKLE_PRIVATE_KEY_BASE64: ${{ secrets.SPARKLE_PRIVATE_KEY_BASE64 }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for var in \
+            APPLE_CERTIFICATE_BASE64 \
+            APPLE_CERTIFICATE_PASSWORD \
+            KEYCHAIN_PASSWORD \
+            DEVELOPER_ID_APPLICATION \
+            APP_STORE_CONNECT_API_KEY_BASE64 \
+            APP_STORE_CONNECT_KEY_ID \
+            APP_STORE_CONNECT_ISSUER_ID \
+            SPARKLE_PRIVATE_KEY_BASE64
+          do
+            if [[ -z "${!var:-}" ]]; then
+              missing+=("$var")
+            fi
+          done
+
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+          if [[ "${#missing[@]}" -eq 0 ]]; then
+            echo "has_release_secrets=true" >> "$GITHUB_OUTPUT"
+            echo "All release signing prerequisites are available."
+          else
+            echo "has_release_secrets=false" >> "$GITHUB_OUTPUT"
+            echo "Missing release secrets: ${missing[*]}"
+            echo "Release workflow will be skipped gracefully."
+          fi
+
+  build_signed_updates:
+    needs: preflight
+    if: needs.preflight.outputs.has_release_secrets == 'true'
+    runs-on: macos-15
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      release_dmg_name: ${{ steps.metadata.outputs.release_dmg_name }}
+      release_build_version: ${{ steps.metadata.outputs.release_build_version }}
+      release_short_version: ${{ steps.metadata.outputs.release_short_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure keychain and import signing identity
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security list-keychains -d user -s build.keychain
+
+          cert_path="$RUNNER_TEMP/developer_id.p12"
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$cert_path"
+          security import "$cert_path" -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productbuild
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" build.keychain
+
+      - name: Configure notarytool profile
+        env:
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          api_key_path="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$api_key_path"
+          xcrun notarytool store-credentials PromptImproverNotaryProfile \
+            --key "$api_key_path" \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Resolve package dependencies
+        run: |
+          /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+            -resolvePackageDependencies \
+            -project PromptImprover.xcodeproj \
+            -scheme PromptImprover
+
+      - name: Locate Sparkle toolchain
+        run: |
+          set -euo pipefail
+          sparkle_bin="$(find "$HOME/Library/Developer/Xcode/DerivedData" -type d -path '*/SourcePackages/artifacts/sparkle/Sparkle/bin' | head -n 1)"
+          if [[ -z "$sparkle_bin" ]]; then
+            echo "Could not locate Sparkle bin directory in DerivedData." >&2
+            exit 1
+          fi
+          echo "SPARKLE_BIN=$sparkle_bin" >> "$GITHUB_ENV"
+
+      - name: Install dmgbuild
+        run: |
+          python3 -m venv /tmp/dmgbuild-venv
+          /tmp/dmgbuild-venv/bin/pip install --quiet dmgbuild
+          echo "DMGBUILD_VENV=/tmp/dmgbuild-venv" >> "$GITHUB_ENV"
+
+      - name: Build, notarize, and generate updates (no publish)
+        env:
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+          NOTARY_PROFILE: PromptImproverNotaryProfile
+          SPARKLE_BIN: ${{ env.SPARKLE_BIN }}
+          SPARKLE_PRIVATE_KEY_BASE64: ${{ secrets.SPARKLE_PRIVATE_KEY_BASE64 }}
+          SKIP_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          scripts/release/release.sh
+
+      - name: Extract release metadata
+        id: metadata
+        run: |
+          set -euo pipefail
+          source scripts/release/.release-state.env
+
+          : "${RELEASE_DMG_PATH:?missing RELEASE_DMG_PATH}"
+          : "${RELEASE_BUILD_VERSION:?missing RELEASE_BUILD_VERSION}"
+          : "${RELEASE_SHORT_VERSION:?missing RELEASE_SHORT_VERSION}"
+          : "${RELEASE_TAG:?missing RELEASE_TAG}"
+
+          test -f "$RELEASE_DMG_PATH"
+
+          dmg_name="$(basename "$RELEASE_DMG_PATH")"
+          echo "release_dmg_name=$dmg_name" >> "$GITHUB_OUTPUT"
+          echo "release_build_version=$RELEASE_BUILD_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_short_version=$RELEASE_SHORT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed updates artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-signed-updates
+          path: updates
+          if-no-files-found: error
+
+  publish_signed_updates:
+    needs: [preflight, build_signed_updates]
+    if: needs.preflight.outputs.has_release_secrets == 'true'
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download signed updates artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-signed-updates
+          path: artifact-updates
+
+      - name: Normalize downloaded updates
+        id: normalize_updates
+        env:
+          RELEASE_DMG_NAME: ${{ needs.build_signed_updates.outputs.release_dmg_name }}
+        run: |
+          set -euo pipefail
+
+          preferred_appcast="$(find artifact-updates -type f -path '*/updates/stable/appcast.xml' | sort | head -n 1 || true)"
+          if [[ -n "$preferred_appcast" ]]; then
+            appcast_path="$preferred_appcast"
+          else
+            appcast_path="$(find artifact-updates -type f -name 'appcast.xml' | sort | head -n 1 || true)"
+          fi
+
+          if [[ -z "$appcast_path" ]]; then
+            echo "Could not find appcast.xml in downloaded artifact." >&2
+            find artifact-updates -maxdepth 5 -print || true
+            exit 1
+          fi
+
+          source_dir="$(dirname "$appcast_path")"
+          mkdir -p updates/stable
+          rsync -a --delete "$source_dir/" updates/stable/
+
+          if [[ ! -f "updates/stable/$RELEASE_DMG_NAME" ]]; then
+            echo "Expected DMG not found after normalization: updates/stable/$RELEASE_DMG_NAME" >&2
+            find updates/stable -maxdepth 5 -print || true
+            exit 1
+          fi
+
+          echo "release_dmg_path=updates/stable/$RELEASE_DMG_NAME" >> "$GITHUB_OUTPUT"
+          echo "release_appcast_path=updates/stable/appcast.xml" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure release exists for tag
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists."
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$RELEASE_TAG" \
+              --notes "Automated notarized Sparkle release."
+          fi
+
+      - name: Publish release asset and feed
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+          RELEASE_DMG_PATH: ${{ steps.normalize_updates.outputs.release_dmg_path }}
+          RELEASE_APPCAST_PATH: ${{ steps.normalize_updates.outputs.release_appcast_path }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          scripts/release/40_publish_github.sh
+
+      - name: Release summary
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+          RELEASE_BUILD_VERSION: ${{ needs.build_signed_updates.outputs.release_build_version }}
+          RELEASE_SHORT_VERSION: ${{ needs.build_signed_updates.outputs.release_short_version }}
+          RELEASE_DMG_NAME: ${{ needs.build_signed_updates.outputs.release_dmg_name }}
+        run: |
+          {
+            echo "## Release Summary"
+            echo ""
+            echo "- Tag: \\`$RELEASE_TAG\\`"
+            echo "- Build version (CFBundleVersion): \\`$RELEASE_BUILD_VERSION\\`"
+            echo "- Short version: \\`$RELEASE_SHORT_VERSION\\`"
+            echo "- DMG: \\`$RELEASE_DMG_NAME\\`"
+            echo "- Release URL: https://github.com/${GITHUB_REPOSITORY}/releases/tag/$RELEASE_TAG"
+            echo "- Appcast URL: https://jnjambrin0.github.io/PromptImprover/updates/stable/appcast.xml"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  skipped_notice:
+    needs: preflight
+    if: needs.preflight.outputs.has_release_secrets != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Release skipped (missing secrets)
+        run: |
+          {
+            echo "## Release Skipped"
+            echo ""
+            echo "Release skipped: missing signing/notary secrets."
+            echo "Configure required secrets to enable notarized production releases."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Release skipped: missing signing/notary secrets."

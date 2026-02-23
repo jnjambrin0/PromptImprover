@@ -1,0 +1,63 @@
+name: Support Question
+description: Ask a usage or troubleshooting question.
+title: "[Support]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For security vulnerabilities, do not use this form. Please follow SECURITY.md and report privately via GitHub Security Advisories.
+
+  - type: textarea
+    id: question_summary
+    attributes:
+      label: Question Summary
+      description: What do you need help with?
+      placeholder: I need help with ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted_steps
+    attributes:
+      label: What You Already Tried
+      description: Include troubleshooting steps you already ran.
+      placeholder: I tried ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: selected_tool
+    attributes:
+      label: Selected Tool
+      options:
+        - codex
+        - claude
+        - both
+        - not sure
+    validations:
+      required: true
+
+  - type: input
+    id: promptimprover_version
+    attributes:
+      label: PromptImprover Version
+      placeholder: e.g. v0.2.0 or commit SHA
+    validations:
+      required: true
+
+  - type: input
+    id: macos_version
+    attributes:
+      label: macOS Version
+      placeholder: e.g. macOS 15.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs_context
+    attributes:
+      label: Relevant Logs / Context
+      description: Paste only relevant snippets and redact secrets.
+      render: shell
+

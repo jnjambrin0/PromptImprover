@@ -1,0 +1,100 @@
+name: Bug Report
+description: Report a reproducible defect in PromptImprover.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Please provide a minimal reproduction so maintainers can validate quickly.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I am using the latest available release (or the latest main branch build).
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the defect.
+      placeholder: A concise summary of the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide deterministic steps.
+      placeholder: |
+        1. Open PromptImprover
+        2. Select ...
+        3. Click ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: Current Behavior
+      placeholder: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: selected_tool
+    attributes:
+      label: Selected Tool
+      options:
+        - codex
+        - claude
+        - both
+        - not sure
+    validations:
+      required: true
+
+  - type: input
+    id: promptimprover_version
+    attributes:
+      label: PromptImprover Version
+      description: Release tag/build number or commit SHA.
+      placeholder: e.g. v0.2.0 or 1a2b3c4
+    validations:
+      required: true
+
+  - type: input
+    id: macos_version
+    attributes:
+      label: macOS Version
+      placeholder: e.g. macOS 15.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Screenshots
+      description: Paste relevant logs and/or add screenshots. Redact secrets and personal data.
+      render: shell
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other useful details.
+

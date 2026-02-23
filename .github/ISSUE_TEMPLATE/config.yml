@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability (Private)
+    url: https://github.com/jnjambrin0/PromptImprover/security/advisories/new
+    about: Report vulnerabilities privately via GitHub Security Advisories.
+  - name: Security Policy
+    url: https://github.com/jnjambrin0/PromptImprover/blob/main/SECURITY.md
+    about: Read scope, disclosure expectations, and response process.
+  - name: Support Policy
+    url: https://github.com/jnjambrin0/PromptImprover/blob/main/SUPPORT.md
+    about: Learn where to ask for help and what to include.
+
