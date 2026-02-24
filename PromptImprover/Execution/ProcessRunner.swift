@@ -131,7 +131,7 @@ final class ProcessRunner {
 
             var shouldTimeout = false
             self.stateQueue.sync {
-                if !self.isFinished, let process = self.process, process.isRunning {
+                if !self.isFinished {
                     shouldTimeout = true
                 }
             }

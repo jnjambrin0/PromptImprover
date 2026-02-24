@@ -3,7 +3,7 @@ import Testing
 @testable import PromptImproverCore
 
 @MainActor
-@Suite(.serialized)
+@Suite(.serialized, .timeLimit(.minutes(1)))
 struct SparkleUpdateManagerTests {
     @Test
     func preferenceBindingsRoundTripToUpdater() {

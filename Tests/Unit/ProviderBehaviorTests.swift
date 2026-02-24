@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import PromptImproverCore
 
-@Suite(.serialized)
+@Suite(.serialized, .timeLimit(.minutes(1)))
 struct ProviderBehaviorTests {
     @Test
     func codexRetriesWithInheritedHomeWhenIsolatedAuthFails() async throws {
