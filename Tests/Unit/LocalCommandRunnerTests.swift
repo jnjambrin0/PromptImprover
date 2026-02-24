@@ -19,12 +19,19 @@ struct LocalCommandRunnerTests {
         #expect(result.timedOut == false)
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func marksTimeoutWhenCommandDoesNotFinish() {
         let runner = LocalCommandRunner()
+        let timeoutScript = try! TestSupport.makeExecutableScript(
+            name: "local-command-runner-timeout",
+            script: "#!/bin/sh\nwhile true; do sleep 1; done\n",
+            prefix: "LocalCommandRunner"
+        )
+        defer { TestSupport.removeItemIfPresent(timeoutScript.deletingLastPathComponent()) }
+
         let result = runner.run(
-            executableURL: URL(fileURLWithPath: "/bin/zsh"),
-            arguments: ["-lc", "sleep 2"],
+            executableURL: timeoutScript,
+            arguments: [],
             environment: nil,
             timeout: 0.05
         )

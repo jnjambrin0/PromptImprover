@@ -35,12 +35,19 @@ struct ProcessRunnerTests {
         #expect(exitCode == 0)
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func timeoutThrowsExpectedError() async {
         let runner = ProcessRunner()
+        let timeoutScript = try! TestSupport.makeExecutableScript(
+            name: "process-runner-timeout",
+            script: "#!/bin/sh\nwhile true; do sleep 1; done\n",
+            prefix: "ProcessRunner"
+        )
+        defer { TestSupport.removeItemIfPresent(timeoutScript.deletingLastPathComponent()) }
+
         let stream = runner.run(
-            executableURL: URL(fileURLWithPath: "/bin/zsh"),
-            arguments: ["-lc", "sleep 2"],
+            executableURL: timeoutScript,
+            arguments: [],
             cwd: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
             env: [:],
             timeout: 0.2
@@ -54,9 +61,15 @@ struct ProcessRunnerTests {
     @Test
     func cancelTerminatesProcess() async throws {
         let runner = ProcessRunner()
+        let timeoutScript = try! TestSupport.makeExecutableScript(
+            name: "process-runner-cancel",
+            script: "#!/bin/sh\necho started\nwhile true; do sleep 1; done\n",
+            prefix: "ProcessRunner"
+        )
+        defer { TestSupport.removeItemIfPresent(timeoutScript.deletingLastPathComponent()) }
         let stream = runner.run(
-            executableURL: URL(fileURLWithPath: "/bin/zsh"),
-            arguments: ["-lc", "echo started; sleep 10"],
+            executableURL: timeoutScript,
+            arguments: [],
             cwd: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
             env: [:],
             timeout: 15
