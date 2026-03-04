@@ -1,11 +1,11 @@
 # PromptImprover
 
-Open Source macOS app for local prompt optimization using `codex` and `claude` CLIs, with strict output-contract validation.
-
-[![Release](https://github.com/jnjambrin0/PromptImprover/actions/workflows/release.yml/badge.svg)](https://github.com/jnjambrin0/PromptImprover/actions/workflows/release.yml)
-[![Release Local (No Developer ID)](https://github.com/jnjambrin0/PromptImprover/actions/workflows/release-local.yml/badge.svg)](https://github.com/jnjambrin0/PromptImprover/actions/workflows/release-local.yml)
+[![Latest Release](https://img.shields.io/github/v/release/jnjambrin0/PromptImprover?label=Latest%20Release)](https://github.com/jnjambrin0/PromptImprover/releases)
+[![Downloads](https://img.shields.io/github/downloads/jnjambrin0/PromptImprover/total?label=Downloads)](https://github.com/jnjambrin0/PromptImprover/releases)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jnjambrin0/PromptImprover)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+Open Source macOS app for local prompt optimization using `codex` and `claude` CLIs, with strict output-contract validation.
 
 ## Table of Contents
 
